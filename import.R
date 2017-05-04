@@ -49,6 +49,7 @@ df.csv <- df.csv[, names(df.csv) %not in% c("X",
 df1 <- df.csv
 df1$outlier <- OutlierDetector(df1, alpha = 0.05)
 
+# Joonistame
 df.m <- melt(data=df1, id.vars = c("Time", "outlier"))
 p <- ggplot(data=df.m, aes(x=Time, y=value, col=outlier)) +
   scale_x_datetime() +
