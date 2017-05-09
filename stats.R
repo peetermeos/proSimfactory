@@ -6,6 +6,16 @@
 # Peeter Meos, Proespert
 # 9. May 2017
 
+# Calculates operation - resources tuples with probabilities
+calcResources <- function(df){
+  df1 <- df[, c("OPERATION", "RESRCE")]
+  
+  df1 <- unique(df1)
+  df1 <- df1[order(df1$OPERATION, df1$RESRCE), ]
+  
+  return(df1)
+}
+
 calcStats <- function(df){
   ops <- unique(df$OPERATION)
   
