@@ -42,11 +42,9 @@ calcStats <- function(df){
       ops.s.q[i] <- sd(df$PASS1_ELAPSED_QUEUE_TIME[df1$RESRCE == ops[i]])
   }  
   
-  r <- as.data.frame(cbind(as.character(ops), ops.n, ops.m, ops.s, ops.m.q, ops.s.q))
-  names(r)[1] <- "res"
-  
-  r[,-1] <- as.numeric(as.character(r[,-1]))
-  
+  r <- as.data.frame(cbind(ops.n, ops.m, ops.s, ops.m.q, ops.s.q))
+  r$res <- ops
+
   return(r)
 }
 
