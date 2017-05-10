@@ -13,11 +13,32 @@ generateSFC <- function(prefix="EE", n=1, len=10){
   return(paste(prefix, str_pad(round(runif(n, min=0, max=10^len)), width=len, side="left", pad="0"),sep=""))
 }
 
+findMean <- function(x, df){
+  m <- 0
+  if (length(df.stats$ops.m[df.stats$res == x]) > 0)
+    if(!is.na(df$ops.m[df$res == x]) & is.numeric(df$ops.m[df$res == x]))
+      m <- df$ops.m[df$res == x]
+  return(m)
+}
+
+findMeanQ <- function(x, df){
+  m <- 0
+  if (length(df.stats$ops.m.q[df.stats$res == x]) > 0)
+    if(!is.na(df$ops.m.q[df$res == x]) & is.numeric(df$ops.m.q[df$res == x]))
+      m <- df$ops.m.q[df$res == x]
+    return(m)
+}
+
 # n - number of SFCs to generate
-generatePaths <- function(proc.list, n=1){
+generatePaths <- function(proc.list, n=1, start.date=NULL){
   # Need to generate following colums
   # "SFC" "OPERATION"     "STEP_ID" "RESRCE" "PASS1_QTY_STARTED" "PASS1_QTY_COMPLETED" "TIMES_PROCESSED"
   # "PASS1_ELAPSED_TIME" "PASS1_ELAPSED_QUEUE_TIME" "PREVIOUS_RESRCE" "ODS_DATE_TIME" "PASS1_NC_DEFECT_COUNT"
+  
+  # Handle start date
+  if(is.null(start.date)){
+    start.date = Sys.Date()
+  }
   
   # Calculate descriptive stats
   df.stats <- calcStats(df1)
@@ -36,11 +57,11 @@ generatePaths <- function(proc.list, n=1){
     step <- seq(10, length(p)*10, by=10)
     
     #"PASS1_ELAPSED_TIME" 
-    t.elapsed <- sapply(p, function(x){if (df.stats$ops.m[df.stats$res == x] > 0) rexp(1, rate=1/df.stats$ops.m[df.stats$res == x]) else 0})
+    t.elapsed <- sapply(p, function(x){round(rexp(1,1/findMean(x, df.stats)))})
     #"PASS1_ELAPSED_QUEUE_TIME"
-    t.queue <- sapply(p, function(x){if(df.stats$ops.m.q[df.stats$res == x] > 0) rexp(1, rate=1/df.stats$ops.m.q[df.stats$res == x]) else 0})
+    t.queue <- sapply(p, function(x){round(rexp(1,1/findMeanQ(x, df.stats)))})
     
-    df.tmp <-  as.data.frame(cbind(sfc[i], step, p, prv, t.elapsed, t.queue))
+    df.tmp <-  data.frame(cbind(sfc[i], step, p, prv, t.elapsed, t.queue))
     
     
     if(i == 1){
@@ -65,6 +86,9 @@ generatePaths <- function(proc.list, n=1){
   df$PASS1_NC_DEFECT_COUNT <- 0
   
   # Times
+  df$ODS_DATE_TIME <- format(start.date, format="%Y-%m-%d %H:%M:%S")
+  
+  row.names(df) <- NULL
   
   return(df)
 }
