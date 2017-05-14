@@ -50,7 +50,7 @@ p <- ggplot(data=df.new, aes(x=Running.in.moment, y=value, col=type)) +
      theme_bw() +
      theme(axis.text.y = element_text(size=7))
 
-pdf(file="pilt.pdf", width = 16, height = 10)
+#pdf(file="pilt.pdf", width = 16, height = 10)
 #png(file="pilt.png", width = 1024, height = 800)
 print(p)
-dev.off()
+#dev.off()

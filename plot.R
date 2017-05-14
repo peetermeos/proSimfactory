@@ -59,7 +59,7 @@ df2$OPERATION <- factor(as.character(df2$OPERATION), levels=c(
   ))
 
 #[df2$type == "EE",]
-p <- ggplot(data = df2, aes(x=date, y=OPERATION, group=SFC, col=type, size=PASS1_ELAPSED_TIME)) +
+p <- ggplot(data = df2[!is.na(df2$group),], aes(x=date, y=OPERATION, group=group, col=group, size=PASS1_ELAPSED_TIME)) +
      ggtitle(paste("Processes in period from", t1, "through", t2, sep = " ")) +
      geom_point() +
      geom_line(size=0.15) +
