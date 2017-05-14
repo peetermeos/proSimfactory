@@ -5,6 +5,7 @@
 # Date: 9. May 2017
 
 library(plyr)
+library(Matrix)
 
 # Helper function just in case
 `%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
@@ -73,5 +74,68 @@ uniquePaths <- function(data, data.wip, type="RESRCE", ignore.repairs=TRUE){
   
   # .. and return the result
   return(proc.unique)
+}
+
+findChildren <- function(m, sfc, parent){
+  children <- which(m[parent,] > 0) 
+  s <- sfc[parent]
+  for(i in children[children != parent]){
+    s <- paste(s, findChildren(m, sfc, i), sep=":")
+  }
+  
+  return(s)
+}
+
+# Generates product tree from SFC_ORDER_HIST_WIP table
+generateProductTree <- function(df){
+  df$child <- gsub("^.*,","", as.character(df$SFC_BO))
+  
+  df <- df[, c("child", "SFC")]
+  names(df) <- c("child", "parent")
+
+  df$child <- as.character(df$child)
+  df$parent <- as.character(df$parent)
+  
+  sfc <- unique(c(df$child, df$parent))
+  sfc <- sfc[order(sfc)]
+  
+  # Create sparse adjacency matrix
+  m <- Matrix(data=0, nrow=length(sfc), ncol = length(sfc), sparse = TRUE)
+  #m <- matrix(data=0, nrow=length(sfc), ncol = length(sfc))
+    
+  # Populate matrix as a bidirectional graph
+  for(i in 1:nrow(df)){
+    i1 <- which(sfc == df$parent[i])
+    i2 <- which(sfc == df$child[i])  
+    m[i1, i2] <- 1
+    #m[i2, i1] <- 1
+  }
+  
+  child  <-  ""
+  
+  # # Loop through all the parents
+  # for(i in 1:nrow(m)){
+  #   child[i] <- findChildren(m, sfc, i)
+  # }
+  # 
+  # 
+  # # Find all the subsprocesses that are fragments of bigger processes
+  # child <- child[order(child)]
+  # p <- child
+  # 
+  # for(i in 1:length(child)){
+  #   l <- grep(child[i], child)
+  #   if(length(l) > 1) p[i] <- ""
+  # }
+  # # Eliminate empty strings
+  # child <- unique(p)[-1]
+  # rm(p)
+  # 
+  # group <- 0
+  # group <- sapply(sfc, function(x){grep(x, child)[1]})
+  # 
+  # # Return the results
+  # return(list(sfc=data.frame(sfc, group, row.names=seq(1, length(sfc))), matrix=m, child=child))  
+  return(list(matrix=m))
 }
 
