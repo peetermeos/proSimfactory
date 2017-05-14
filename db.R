@@ -34,8 +34,8 @@ tbl5 <- "ODS_SFC_WIP"
 
 db <- odbcDriverConnect(s.odbc)
 
-t1 <- "2017-01-02"
-t2 <- "2017-01-18"
+t1 <- "2017-01-14"
+t2 <- "2017-01-31"
 
 df.prod <- sqlQuery(db, paste("SELECT TOP 10000 SFC, OPERATION, STEP_ID, RESRCE, PASS1_QTY_STARTED,
                                          PASS1_QTY_COMPLETED, TIMES_PROCESSED, PASS1_ELAPSED_TIME, 
@@ -44,9 +44,10 @@ df.prod <- sqlQuery(db, paste("SELECT TOP 10000 SFC, OPERATION, STEP_ID, RESRCE,
                                FROM dbo.ODS_PRODUCTION_LOG
                                WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
 
-df.sfc.order.hist.wip  <- sqlQuery(db, paste("SELECT TOP 40000 * 
+df.sfc.order.hist.wip  <- sqlQuery(db, paste("SELECT TOP 100000 * 
                                               FROM dbo.ODS_SFC_ID_HISTORY_WIP 
-                                              WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+                                              WHERE (REASON = 'S' OR REASON = 'P') 
+                                                AND DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
 
 
 df.order <- sqlQuery(db, "SELECT TOP 100 * FROM dbo.ODS_SHOP_ORDER")
@@ -60,6 +61,10 @@ df.bom.component  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_BOM_COMPONENT"
 
 df.op.production  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_OPERATION_PRODUCTION")
 
+#SELECT TOP 1000 *
+#  FROM [SAPMEODS].[dbo].[AR_SFC]
+#where ITEM_BO like 'ItemBO:EEEL1,41908%'
+#order by ACTUAL_COMP_DATE desc
 
 
 odbcClose(db)
