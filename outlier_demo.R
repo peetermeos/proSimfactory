@@ -5,12 +5,12 @@ library(gganimate)
 
 source("outlier.R")
 
-# Create data frame
+# Setup parameters
 len <- 500
 s.dev <- c(0.1, 0.02, 0.075)
-
 shift <- c(3,3,3)
 
+# Generate time signal and data frame
 Time <- seq(1, len)
 df <-  as.data.frame(Time)
 
@@ -21,6 +21,7 @@ df$s3 <- sin(Time/50)
 
 # Add jump to s1
 df$s1[(len/2):nrow(df)] <- sin(Time[(len/2):nrow(df)] / 100) * 2.5 - 0.6
+
 # Change phase for s2 and s3
 df$s2[(len/2):nrow(df)] <- sin(Time[(len/2):nrow(df)]/50 + 500) / 5 - 1.1
 df$s3[(len/2):nrow(df)] <- sin(Time[(len/2):nrow(df)]/50 + 500) / 5 - 1.1
@@ -43,8 +44,8 @@ df <- df[order(df$Time),]
 df$Frame <- round(seq(1, nrow(df)) / (nrow(df)/num.frames))
 df$Line <- sapply(df$Frame, function(x){
   return(as.character(df$Time[df$Frame == x][which.max(df$Time[df$Frame == x])]))   })
-#df$Line <- as.POSIXct(df1$Line, format="%Y-%m-%d %H:%M:%S")
 
+# Melt df for ggplot
 df.m <- melt(df, id.vars=c("Time", "Frame", "Line", "outlier"))
 
 p <- ggplot(df.m, aes(x=Time, y=value, size=outlier)) +
@@ -61,4 +62,4 @@ print(p)
 ani.options(ani.width=a.h, ani.height=a.w)
 a <- gganimate(p, interval=0.2, format="avi", title_frame = FALSE)
 
-print(a, format="mp4", ani.width=a.h, ani.height=a.w)
+print(a, format="avi", ani.width=a.h, ani.height=a.w)

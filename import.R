@@ -100,5 +100,5 @@ p <- ggplot(data=df.m, aes(x=Time, y=value, size=outlier)) +
 ani.options(ani.width=a.h, ani.height=a.w)
 a <- gganimate(p, interval=0.2, format="avi", title_frame = FALSE)
 
-print(a, format="mp4", ani.width=a.h, ani.height=a.w)
+print(a, format="avi", ani.width=a.h, ani.height=a.w)
 #print(p)
