@@ -49,19 +49,34 @@ df1$outlier <- OutlierDetector(df1, alpha = 0.05)
 df1 <- df1[, names(df1) %in% draw.filter]
 
 # Animation setup
-num.frames <- 120
+num.frames <- 200
 a.h <- 1024
 a.w <- 800
 
+# Create what-if (region to be replaced)
+t1.tmp <- as.POSIXct("2017-04-01 06:48:25", format="%Y-%m-%d %H:%M:%S")
+t2.tmp <- as.POSIXct("2017-04-01 07:22:43", format="%Y-%m-%d %H:%M:%S")
+
+# How many data points?
+n.points <- nrow(df1[df1$Time >= t1.tmp & df1$Time <= t2.tmp,])
+t3.tmp <- as.POSIXct("2017-04-01 06:00:00", format="%Y-%m-%d %H:%M:%S")
+
+# Extract earlied good time series
+df1.tmp <- df1[df1$Time >= t3.tmp,][(1:n.points), ]
+df1.tmp$Time <- df1$Time[df1$Time >= t1.tmp][(1:n.points)]
+
+# Replace tag and add to the data frame
+df1.tmp$outlier <-  "WHAT-IF"
+df1 <- rbind(df1, df1.tmp)
+rm(df1.tmp)
+
 # Distribute data into animation frames
+df1 <- df1[order(df1$Time),]
 df1$Frame <- round(seq(1, nrow(df1)) / (nrow(df1)/num.frames))
 df1$Line <- sapply(df1$Frame, function(x){
   return(as.character(df1$Time[df1$Frame == x][which.max(df1$Time[df1$Frame == x])]
-                     ))   })
-
+  ))   })
 df1$Line <- as.POSIXct(df1$Line, format="%Y-%m-%d %H:%M:%S")
-
-#df1$Frame <- format(df1$Time, format="%Y-%m-%d %H:%M")
 
 # Joonistame
 df.m <- melt(data=df1, id.vars = c("Time", "Frame", "Line", "outlier"))
@@ -72,8 +87,8 @@ df.m$value <- as.numeric(df.m$value)
 p <- ggplot(data=df.m, aes(x=Time, y=value, size=outlier)) +
   scale_x_datetime(breaks=pretty_breaks(20)) +
   scale_y_continuous(breaks = pretty_breaks(5)) +
-  scale_color_manual(values=c("black", "red")) + 
-  scale_size_manual(values=c(0.5, 1.75)) +
+  scale_color_manual(values=c("black", "red", "blue")) + 
+  scale_size_manual(values=c(0.5, 1.75, 0.5)) +
   geom_point(aes(frame=Frame, cumulative = TRUE, col=outlier)) +
   geom_vline(aes(xintercept = as.numeric(Line), frame = Frame), lty = 2, color = "red") +
   facet_grid(variable~., scales = "free") +
@@ -83,7 +98,7 @@ p <- ggplot(data=df.m, aes(x=Time, y=value, size=outlier)) +
 
 
 ani.options(ani.width=a.h, ani.height=a.w)
-a <- gganimate(p, interval=0.2, format="avi")
+a <- gganimate(p, interval=0.2, format="avi", title_frame = FALSE)
 
-print(a, format="avi", ani.width=a.h, ani.height=a.w)
-print(p)
+print(a, format="mp4", ani.width=a.h, ani.height=a.w)
+#print(p)
