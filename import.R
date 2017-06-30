@@ -17,8 +17,8 @@ fn <- "Ersa Powerflow N2 - 04/04/01/2017_04_01_01_58_09.Trend"
 #f.folder <- "Ersa Powerflow N2 - 04/04/01"
 f.folder <- "Ersa Powerflow N2 - 04/04"
 
-# if (exists("df1")) rm(df1)
-# 
+if (exists("df1")) rm(df1)
+
 # for(j in list.dirs(f.folder)[-1]){
 #   print(paste("Folder ", j))
 #   for(i in list.files(j)){
@@ -90,7 +90,7 @@ p <- ggplot(data=df.m, aes(x=Time, y=value, size=outlier)) +
   scale_color_manual(values=c("black", "red", "blue")) + 
   scale_size_manual(values=c(0.5, 1.75, 0.5)) +
   geom_point(aes(frame=Frame, cumulative = TRUE, col=outlier)) +
-  geom_vline(aes(xintercept = as.numeric(Line), frame = Frame), lty = 2, color = "red") +
+#  geom_vline(aes(xintercept = as.numeric(Line), frame = Frame), lty = 2, color = "red") +
   facet_grid(variable~., scales = "free") +
   theme_bw() +
   theme(strip.text.y = element_text(angle=0)) 
@@ -98,7 +98,7 @@ p <- ggplot(data=df.m, aes(x=Time, y=value, size=outlier)) +
 
 
 ani.options(ani.width=a.h, ani.height=a.w)
-a <- gganimate(p, interval=0.2, format="avi", title_frame = FALSE)
+a <- gganimate(p, interval=0.2, format="html", title_frame = FALSE)
 
-print(a, format="avi", ani.width=a.h, ani.height=a.w)
-#print(p)
+#print(a, format="html", ani.width=a.h, ani.height=a.w)
+print(p)

@@ -34,23 +34,28 @@ tbl5 <- "ODS_SFC_WIP"
 
 db <- odbcDriverConnect(s.odbc)
 
-t1 <- "2017-01-14"
-t2 <- "2017-01-31"
+t1 <- "2017-05-08"
+t2 <- "2017-05-12"
 
-df.prod <- sqlQuery(db, paste("SELECT TOP 10000 SFC, OPERATION, STEP_ID, RESRCE, PASS1_QTY_STARTED,
-                                         PASS1_QTY_COMPLETED, TIMES_PROCESSED, PASS1_ELAPSED_TIME, 
-                                         PASS1_ELAPSED_QUEUE_TIME, PREVIOUS_RESRCE, ODS_DATE_TIME,
-                                         PASS1_NC_DEFECT_COUNT 
-                               FROM dbo.ODS_PRODUCTION_LOG
-                               WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+#df.prod <- sqlQuery(db, paste("SELECT TOP 50000 * FROM dbo.ODS_PRODUCTION_LOG
+#                               WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
 
-df.sfc.order.hist.wip  <- sqlQuery(db, paste("SELECT TOP 100000 * 
+df.prod <- sqlQuery(db, paste("SELECT SFC, OPERATION, ROUTER, STEP_ID, RESRCE, PASS1_QTY_STARTED,
+                                        PASS1_QTY_COMPLETED, TIMES_PROCESSED, PASS1_ELAPSED_TIME,
+                                        PASS1_ELAPSED_QUEUE_TIME, PREVIOUS_RESRCE, ODS_DATE_TIME,
+                                        PASS1_NC_DEFECT_COUNT, SHOP_ORDER
+                              FROM dbo.ODS_PRODUCTION_LOG
+                              WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+
+df.sfc.order.hist.wip  <- sqlQuery(db, paste("SELECT * 
                                               FROM dbo.ODS_SFC_ID_HISTORY_WIP 
                                               WHERE (REASON = 'S' OR REASON = 'P') 
                                                 AND DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
 
 
-df.order <- sqlQuery(db, "SELECT TOP 100 * FROM dbo.ODS_SHOP_ORDER")
+df.order <- sqlQuery(db, paste("SELECT * FROM dbo.ODS_SHOP_ORDER
+                                WHERE ACTUAL_START_DATE >='", t1, "' AND ACTUAL_START_DATE   <= '", t2, "'", sep=""))
+
 df.hist <- sqlQuery(db, "SELECT TOP 100 * FROM dbo.ODS_ASSEMBLY_HISTORY")
 df.hist.wip <- sqlQuery(db, "SELECT TOP 100 * FROM dbo.ODS_SFC_ID_HISTORY_WIP")
 df.sfc.wip  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_SFC_WIP")
@@ -60,6 +65,24 @@ df.bom.operation  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_BOM_OPERATION"
 df.bom.component  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_BOM_COMPONENT")
 
 df.op.production  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_OPERATION_PRODUCTION")
+
+# Ressursi kasutuse summary
+df.res.time.log  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_RESOURCE_TIME_LOG")
+
+# Mõttetu
+df.res.util  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ODS_RESOURCE_UTILIZATION")
+
+# See on mõttetu
+df.wip.router  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_ROUTER")
+
+# Siin sees on routingu sammud!
+df.wip.router.step  <- sqlQuery(db, "SELECT TOP 100000 * FROM dbo.WIP_ROUTER_STEP")
+
+# Seob operatsiooni ja ressursi
+df.wip.resrce  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_RESRCE")
+
+# Orderite ajalugu
+df.wip.shop.order  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_SHOP_ORDER")
 
 #SELECT TOP 1000 *
 #  FROM [SAPMEODS].[dbo].[AR_SFC]

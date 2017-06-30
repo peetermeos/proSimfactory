@@ -96,46 +96,62 @@ generateProductTree <- function(df){
   df$child <- as.character(df$child)
   df$parent <- as.character(df$parent)
   
+  # Create vector of unique SFCs
   sfc <- unique(c(df$child, df$parent))
   sfc <- sfc[order(sfc)]
+  sfc <- factor(sfc)
+
+  # Make SFCs in df factors
+  df$child  <- factor(df$child, levels=sfc)
+  df$parent <- factor(df$parent, levels=sfc)
   
+  # Eliminate self referrals
+  df <- df[df$child != df$parent,]
+
   # Create sparse adjacency matrix
-  m <- Matrix(data=0, nrow=length(sfc), ncol = length(sfc), sparse = TRUE)
-  #m <- matrix(data=0, nrow=length(sfc), ncol = length(sfc))
+  # Populate matrix as a unidirectional graph from parent (row)
+  # to child (column). 
+  m <- sparseMatrix(i=as.integer(df$parent), j=as.integer(df$child), x=1, dims=c(length(sfc), length(sfc)))
+  
+  visited <- rep(FALSE, nrow(m))
+
+  # Annab tagasi character vectori.
+  # Vektori pikkus on laste arv
+  # Iga elemendi sisu on laps pluss selle lapsed
+  iterateChildren <- function(node){
+    s <- ""
     
-  # Populate matrix as a bidirectional graph
-  for(i in 1:nrow(df)){
-    i1 <- which(sfc == df$parent[i])
-    i2 <- which(sfc == df$child[i])  
-    m[i1, i2] <- 1
-    #m[i2, i1] <- 1
+    if(node <= ncol(m)){
+      n <- which(m[node,] > 0)
+
+      if(length(n) > 0)
+        visited[n] <- TRUE
+        s <- paste(sfc[node], sapply(n, iterateChildren), sep=":")
+    }
+    return(s)
   }
   
-  child  <-  ""
+  tree <- character(0)
+  for(i in 1:nrow(m)){
+    if(!visited[i]){
+      visited[i] <- TRUE
+      if (length(which(m[i,] > 0)) > 0)
+        tree <- c(tree, iterateChildren(i))
+      else
+        tree <- c(tree, sfc[i]) 
+    }
+  }
   
-  # # Loop through all the parents
-  # for(i in 1:nrow(m)){
-  #   child[i] <- findChildren(m, sfc, i)
-  # }
-  # 
-  # 
-  # # Find all the subsprocesses that are fragments of bigger processes
-  # child <- child[order(child)]
-  # p <- child
-  # 
-  # for(i in 1:length(child)){
-  #   l <- grep(child[i], child)
-  #   if(length(l) > 1) p[i] <- ""
-  # }
-  # # Eliminate empty strings
-  # child <- unique(p)[-1]
-  # rm(p)
-  # 
-  # group <- 0
-  # group <- sapply(sfc, function(x){grep(x, child)[1]})
-  # 
-  # # Return the results
-  # return(list(sfc=data.frame(sfc, group, row.names=seq(1, length(sfc))), matrix=m, child=child))  
-  return(list(matrix=m))
+  # Order it and prune it
+  tree <- unique(tree[order(tree)])
+  
+  for(i in 1:length(tree)){
+    if(nchar(tree[i]) > 0)
+      if(length(grep(tree[i], tree)) > 0) 
+         tree[i] <- ""
+  }
+  
+  tree <- tree[tree != ""]
+  return(list(matrix=m, tree=tree))
 }
 
