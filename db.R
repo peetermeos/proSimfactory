@@ -9,13 +9,13 @@ library(RODBC)
 #' @examples
 #' initSQL("ODS")
 initSQL <- function(type="ODS"){
-  if(type != "ODS" & type != "WIP"){
+  if (type != "ODS" & type != "WIP") {
     stop("type must be either ODS or WIP")
   }
   
   sql <- list()
 
-  if (type == "ODS"){
+  if (type == "ODS") {
     sql$driver.name <- "SQL Server"
     sql$db.name <- "SAPMEODS"
     sql$host.name <- "eeel164.encnet.ead.ems"
@@ -54,7 +54,8 @@ connectSQL <- function(sql){
                   ";Port=", sql$port,
                   ";PROTOCOL=TCPIP",
                   ";UID=", sql$user.name,
-                  ";PWD=", sql$pwd, sep="")  
+                  ";PWD=", sql$pwd,
+                  ";TDS_Version=8.0", sep="")  
   db <- odbcDriverConnect(s.odbc)
   
   return(db)
@@ -82,7 +83,7 @@ disconnectSQL <- function(db){
 #' @export
 #'
 #' @examples
-getTables <- function(db, sql){
+getListOfTables <- function(db, sql){
   require(RODBC)
   
   sql.str <- paste("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ",
@@ -91,6 +92,31 @@ getTables <- function(db, sql){
   ret  <- sqlQuery(db, sql.str)
                                      
   return(ret)
+}
+
+#' Queries the given database and returns the required table 
+#' within the period between t1 and t2. If not specified, brings 
+#' the entire table
+#'
+#' @param db 
+#' @param tblname
+#' @param t1 beginning date
+#' @param t2 end date
+#' @param date.col the name of date column
+#'
+#' @return data frame containing the respective table
+#' @export
+#'
+#' @examples
+getTable <- function(db, tblname="", t1="", t2="", date.col="DATE_TIME"){
+  if (t1 != "" & t2 != "")
+    df  <- sqlQuery(db, paste("SELECT * FROM ", tblname, 
+                              " WHERE ", date.col, " >='", t1, 
+                              "' AND ", date.col, "  <= '", t2, "'", sep = ""))
+  else
+    df  <- sqlQuery(db, paste("SELECT * FROM ", tblname, sep = ""))
+  
+  return(df)
 }
 
 notRun <- function(){
@@ -109,8 +135,8 @@ tbl5 <- "ODS_SFC_WIP"
 
 
 
-t1 <- "2017-05-08"
-t2 <- "2017-05-12"
+t1 <- "2017-06-08"
+t2 <- "2017-06-09"
 
 #df.prod <- sqlQuery(db, paste("SELECT TOP 50000 * FROM dbo.ODS_PRODUCTION_LOG
 #                               WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
@@ -158,6 +184,15 @@ df.wip.resrce  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_RESRCE")
 
 # Orderite ajalugu
 df.wip.shop.order  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_SHOP_ORDER")
+
+
+df.activity.log  <- sqlQuery(db, paste("SELECT * FROM dbo.ACTIVITY_LOG WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+
+df.sfc  <- sqlQuery(db, paste("SELECT * FROM dbo.SFC WHERE MODIFIED_DATE_TIME >='", t1, "' AND MODIFIED_DATE_TIME   <= '", t2, "'", sep=""))
+
+df.status  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.STATUS")
+
+df.item  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ITEM")
 
 #SELECT TOP 1000 *
 #  FROM [SAPMEODS].[dbo].[AR_SFC]
