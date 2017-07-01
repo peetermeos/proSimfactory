@@ -1,24 +1,99 @@
 library(RODBC)
 
-driver.name <- "SQL Server"
-#db.name <- "master"
-db.name <- "SAPMEODS"
-host.name <- "eeel164.encnet.ead.ems"
-port <-""
-user.name <-"proekspert"
-pwd <- "proekspert1!"
+#' Initalise SQL setup for data analysis
+#'
+#' @param type string c("ODS", "WIP")
+#'
+#' @return list of SQL setup parameters to be used by connectSQL()
+#'
+#' @examples
+#' initSQL("ODS")
+initSQL <- function(type="ODS"){
+  if(type != "ODS" & type != "WIP"){
+    stop("type must be either ODS or WIP")
+  }
+  
+  sql <- list()
 
+  if (type == "ODS"){
+    sql$driver.name <- "SQL Server"
+    sql$db.name <- "SAPMEODS"
+    sql$host.name <- "eeel164.encnet.ead.ems"
+    sql$port <-""
+    sql$user.name <-"proekspert"
+    sql$pwd <- "proekspert1!"
+  }
+  
+  if (type == "WIP"){
+    sql$driver.name <- "SQL Server"
+    sql$db.name <- "SAPMEWIP"
+    sql$host.name <- "eeel163.encnet.ead.ems"
+    sql$port <-""
+    sql$user.name <-"proekspert"
+    sql$pwd <- "proekspert1!"
+  }
 
+  return(sql)
+}
 
-# Use a full connection string to connect to a SAMPLE database
-s.odbc <- paste("DRIVER=",driver.name,
-                  ";Database=",db.name,
-                  ";Server=",host.name,
-                  ";Port=",port,
+#' Connect to SAPME database
+#'
+#' @param sql list holding connection parameters
+#'
+#' @return RODBC connection
+#' @export
+#'
+#' @examples
+#' connectSQL(initSQL("WIP"))
+connectSQL <- function(sql){
+  require(RODBC)
+  
+  s.odbc <- paste("DRIVER=", sql$driver.name,
+                  ";Database=", sql$db.name,
+                  ";Server=", sql$host.name,
+                  ";Port=", sql$port,
                   ";PROTOCOL=TCPIP",
-                  ";UID=", user.name,
-                  ";PWD=",pwd, sep="")
+                  ";UID=", sql$user.name,
+                  ";PWD=", sql$pwd, sep="")  
+  db <- odbcDriverConnect(s.odbc)
+  
+  return(db)
+}
 
+#' disconnectSQL disconnects from the database
+#'
+#' @param db RODBC handle for data connection
+#'
+#' @return Returns nothing
+#' @export
+#'
+#' @examples
+disconnectSQL <- function(db){
+  require(RODBC)
+  odbcClose(db)
+}
+
+#' getTables retrieves list of all tables in given database
+#'
+#' @param db RODBC handle of the database
+#' @param sql list from initSQL that contains database name
+#'
+#' @return data frame consisting table names
+#' @export
+#'
+#' @examples
+getTables <- function(db, sql){
+  require(RODBC)
+  
+  sql.str <- paste("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ",
+                   "WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG='", 
+                   sql$db.name,  "'", sep="")
+  ret  <- sqlQuery(db, sql.str)
+                                     
+  return(ret)
+}
+
+notRun <- function(){
 
 #s.odbc <- "Data Source=eeel164.encnet.ead.ems;Initial Catalog=SAPME_ODS;Integrated Security=False;Pooling=False;MultipleActiveResultSets=True;enlist=false"
 
@@ -32,7 +107,7 @@ tbl3 <- "ODS_ASSEMBLY_HISTORY"
 tbl4 <- "ODS_SFC_ID_HISTORY_WIP"
 tbl5 <- "ODS_SFC_WIP"
 
-db <- odbcDriverConnect(s.odbc)
+
 
 t1 <- "2017-05-08"
 t2 <- "2017-05-12"
@@ -88,6 +163,4 @@ df.wip.shop.order  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_SHOP_ORDER")
 #  FROM [SAPMEODS].[dbo].[AR_SFC]
 #where ITEM_BO like 'ItemBO:EEEL1,41908%'
 #order by ACTUAL_COMP_DATE desc
-
-
-odbcClose(db)
+}
