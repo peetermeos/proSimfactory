@@ -1,3 +1,10 @@
+#
+# Connectivity for SAP ME ODS and WIP databases
+#
+# Author: Peeter Meos, Proekspert AS
+# Date: 1. July 2017
+#
+
 library(RODBC)
 
 #' Initalise SQL setup for data analysis
@@ -5,7 +12,8 @@ library(RODBC)
 #' @param type string c("ODS", "WIP")
 #'
 #' @return list of SQL setup parameters to be used by connectSQL()
-#'
+#' @author Peeter Meos, Proekspert AS
+#' 
 #' @examples
 #' initSQL("ODS")
 initSQL <- function(type="ODS"){
@@ -16,23 +24,20 @@ initSQL <- function(type="ODS"){
   sql <- list()
 
   if (type == "ODS") {
-    sql$driver.name <- "SQL Server"
     sql$db.name <- "SAPMEODS"
     sql$host.name <- "eeel164.encnet.ead.ems"
-    sql$port <-""
-    sql$user.name <-"proekspert"
-    sql$pwd <- "proekspert1!"
   }
   
-  if (type == "WIP"){
-    sql$driver.name <- "SQL Server"
+  if (type == "WIP") {
     sql$db.name <- "SAPMEWIP"
     sql$host.name <- "eeel163.encnet.ead.ems"
-    sql$port <-""
-    sql$user.name <-"proekspert"
-    sql$pwd <- "proekspert1!"
   }
 
+  sql$driver.name <- "SQL Server"
+  sql$port <- ""
+  sql$user.name <- "proekspert"
+  sql$pwd <- "proekspert1!"
+  
   return(sql)
 }
 
@@ -67,10 +72,12 @@ connectSQL <- function(sql){
 #'
 #' @return Returns nothing
 #' @export
+#' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
 disconnectSQL <- function(db){
   require(RODBC)
+  
   odbcClose(db)
 }
 
@@ -81,6 +88,7 @@ disconnectSQL <- function(db){
 #'
 #' @return data frame consisting table names
 #' @export
+#' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
 getListOfTables <- function(db, sql){
@@ -88,7 +96,7 @@ getListOfTables <- function(db, sql){
   
   sql.str <- paste("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ",
                    "WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG='", 
-                   sql$db.name,  "'", sep="")
+                   sql$db.name,  "'", sep = "")
   ret  <- sqlQuery(db, sql.str)
                                      
   return(ret)
@@ -106,6 +114,7 @@ getListOfTables <- function(db, sql){
 #'
 #' @return data frame containing the respective table
 #' @export
+#' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
 getTable <- function(db, tblname="", t1="", t2="", date.col="DATE_TIME"){
@@ -119,6 +128,7 @@ getTable <- function(db, tblname="", t1="", t2="", date.col="DATE_TIME"){
   return(df)
 }
 
+# Legacy stuff, thats not really a function but ODS database retrieval
 notRun <- function(){
 
 #s.odbc <- "Data Source=eeel164.encnet.ead.ems;Initial Catalog=SAPME_ODS;Integrated Security=False;Pooling=False;MultipleActiveResultSets=True;enlist=false"

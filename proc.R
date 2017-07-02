@@ -7,9 +7,6 @@
 library(plyr)
 library(Matrix)
 
-# Helper function just in case
-`%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
-
 uniquePaths <- function(data, data.wip, type="RESRCE", ignore.repairs=TRUE){
   if(type %not in% c("RESRCE", "OPERATION")){
     stop("Only path types allowed are: OPERATION, RESRCE")
