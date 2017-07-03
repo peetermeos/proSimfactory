@@ -66,13 +66,14 @@ plotLastStatus <- function(df){
 #' Plots barplot of resources
 #'
 #' @param df data frame containing last statuses of SFCs (RESRCE)
+#' @param title string containing plot title
 #'
 #' @return ggplot object
 #' @export
 #' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
-plotResource <- function(df){
+plotResource <- function(df, title = ""){
   require(ggplot2)
   
   df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
@@ -82,6 +83,8 @@ plotResource <- function(df){
        guides(fill = FALSE) +
        theme_bw() +
        theme(axis.text.x = element_text(angle = 90))
+  
+  if (title != "") p <- p + ggtitle(title)
   
   return(p)
 }
@@ -113,6 +116,37 @@ plotStatusCrosstab <- function(df){
     scale_colour_gradient(low = "white", high = "black") +
     #scale_colour_gradientn(colours=rainbow(4)) +
     theme(axis.text.x = element_text(angle = 90))
+  
+ return(p)
+}
+
+
+#' Violin plot by resource 
+#'
+#' @param df 
+#' @param title 
+#'
+#' @return
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotWaitedTime <- function(df, title = ""){
+  df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
+  df$failure <- as.numeric(factor(df$failure, levels = c("FALSE", "TRUE"))) * 0.1
+  
+  p <- ggplot(df, aes(x = ops.resrce, y = waited, fill = ops.resrce)) +
+       geom_violin(scale = "width") +
+       geom_jitter(height = 0, width = 0.1, aes(size = failure, col = failure)) +
+       scale_size_continuous(range=c(0, 1)) + 
+       scale_y_continuous("Time since last reported event [hr]") +
+       scale_x_discrete("Operation and resource of last reported event") +
+       scale_color_gradient(low = "black", high = "red") +
+       guides(fill = FALSE, color = FALSE, size = FALSE) +
+       theme_bw() +
+       theme(axis.text.x = element_text(angle = 90))
+  
+  if (title != "") p <- p + ggtitle(title)
   
   return(p)
 }
