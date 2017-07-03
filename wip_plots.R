@@ -62,6 +62,30 @@ plotLastStatus <- function(df){
   return(grid.arrange(p1, p2, ncol = 2))
 }
 
+
+#' Plots barplot of resources
+#'
+#' @param df data frame containing last statuses of SFCs (RESRCE)
+#'
+#' @return ggplot object
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotResource <- function(df){
+  require(ggplot2)
+  
+  df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
+  
+  p <- ggplot(df, aes(x=ops.resrce, fill=ops.resrce)) +
+       geom_bar(stat = "count") +
+       guides(fill = FALSE) +
+       theme_bw() +
+       theme(axis.text.x = element_text(angle = 90))
+  
+  return(p)
+}
+
 #' A shot at the last known status of an SFC crosstab
 #'
 #' @param df containing last operations, status codes for given SFC

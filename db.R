@@ -143,11 +143,6 @@ tbl3 <- "ODS_ASSEMBLY_HISTORY"
 tbl4 <- "ODS_SFC_ID_HISTORY_WIP"
 tbl5 <- "ODS_SFC_WIP"
 
-
-
-t1 <- "2017-06-08"
-t2 <- "2017-06-09"
-
 #df.prod <- sqlQuery(db, paste("SELECT TOP 50000 * FROM dbo.ODS_PRODUCTION_LOG
 #                               WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
 
@@ -195,14 +190,6 @@ df.wip.resrce  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_RESRCE")
 # Orderite ajalugu
 df.wip.shop.order  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_SHOP_ORDER")
 
-
-df.activity.log  <- sqlQuery(db, paste("SELECT * FROM dbo.ACTIVITY_LOG WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
-
-df.sfc  <- sqlQuery(db, paste("SELECT * FROM dbo.SFC WHERE MODIFIED_DATE_TIME >='", t1, "' AND MODIFIED_DATE_TIME   <= '", t2, "'", sep=""))
-
-df.status  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.STATUS")
-
-df.item  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.ITEM")
 
 #SELECT TOP 1000 *
 #  FROM [SAPMEODS].[dbo].[AR_SFC]
