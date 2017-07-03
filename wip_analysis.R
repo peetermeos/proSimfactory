@@ -173,3 +173,33 @@ findRepairQueue <- function(df, only.fails = FALSE){
   
   return(df)
 }
+
+#' Hourly operation flow
+#'
+#' @param df Activity log data frame
+#'
+#' @return Hourly summary of operations completed
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+createFlow <- function(df){
+  require(reshape2)
+  
+  # Pivot on action codes
+  df <- dcast(data = df, SFC + RESRCE + OPERATION ~ ACTION_CODE, value.var = "DATE_TIME", 
+              fun.aggregate = mean)
+  
+  # For some reason dcast doesn't like dates and turns them into numeric. Turn them back.
+  df[, -(1:3)] <- lapply(df[,-(1:3)], as.POSIXct, origin = "1970-01-01")
+  
+  # Find the event end time
+  df$event_end <- apply(df[,-(1:3)], 1, max, na.rm = TRUE)
+  
+  # Extract hour
+  df$hour <- as.numeric(format(as.POSIXct(df$event_end), format = "%H"))
+  
+  r <- dcast(data = df, hour ~ OPERATION, value.var = "OPERATION", fun.aggregate = length)
+
+  return(r)
+}

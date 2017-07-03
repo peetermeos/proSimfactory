@@ -132,6 +132,8 @@ plotStatusCrosstab <- function(df){
 #'
 #' @examples
 plotWaitedTime <- function(df, title = ""){
+  require(ggplot2)
+  
   df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
   df$failure <- as.numeric(factor(df$failure, levels = c("FALSE", "TRUE"))) * 0.1
   
@@ -147,6 +149,29 @@ plotWaitedTime <- function(df, title = ""){
        theme(axis.text.x = element_text(angle = 90))
   
   if (title != "") p <- p + ggtitle(title)
+  
+  return(p)
+}
+
+
+#' Plot of operations through time
+#'
+#' @param df data frame containing hourly summary of operations
+#'
+#' @return ggplot object
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotFlow <- function(df){
+  require(ggplot2)
+  require(scales)
+  
+  p <- ggplot(data = df, aes(x = hour, group = OPERATION, fill = OPERATION)) +
+    geom_bar(stat = "count", position = "stack") +
+    scale_x_continuous(breaks = pretty_breaks(20)) +
+    scale_y_continuous(breaks = pretty_breaks(20)) +
+    theme_bw()
   
   return(p)
 }
