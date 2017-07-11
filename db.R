@@ -7,7 +7,7 @@
 
 library(RODBC)
 
-#' Initalise SQL setup for data analysis
+sql #' Initalise SQL setup for data analysis
 #'
 #' @param type string c("ODS", "WIP")
 #'
@@ -128,6 +128,94 @@ getTable <- function(db, tblname="", t1="", t2="", date.col="DATE_TIME"){
   return(df)
 }
 
+getAllProductionLog <- function(){
+  for (i in 0:185){
+    t1 <- as.POSIXct("2017-01-01") + 3600 * 24 * i
+    t2 <- t1 + 3600 * 24 
+    
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+    
+    print(t1)
+    
+    df.ods <- sqlQuery(db, paste("SELECT SFC, OPERATION, ROUTER, STEP_ID, RESRCE, PASS1_QTY_STARTED,
+                                        PASS1_QTY_COMPLETED, TIMES_PROCESSED, PASS1_ELAPSED_TIME,
+                                  PASS1_ELAPSED_QUEUE_TIME, PREVIOUS_RESRCE, ODS_DATE_TIME,
+                                  PASS1_NC_DEFECT_COUNT, SHOP_ORDER
+                                  FROM dbo.ODS_PRODUCTION_LOG
+                                  WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+    
+    save(df.ods, file = paste("Data/", t1, ".RData", sep = ""))
+
+  }
+}
+
+getAllEventLog <- function(){
+  for (i in 0:127){
+    t1 <- as.POSIXct("2017-03-01") + 3600 * 24 * i
+    t2 <- t1 + 3600 * 24 
+    
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+    
+    print(t1)
+    
+    df.ods <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION, 
+                                  ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
+                                  FROM dbo.ACTIVITY_LOG
+                                  WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+    
+    save(df.ods, file = paste("DataWip/", t1, ".RData", sep = ""))
+    
+  }
+}
+
+mergeAllProductionLog <- function(){
+  require(dplyr)
+  for (i in 1:185){
+    t1 <- as.POSIXct("2017-01-01") + 3600 * 24 * i
+    t2 <- t1 + 3600 * 24 
+    
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+    
+    print(t1)
+    load(file = paste("Data/", t1, ".RData", sep = ""))
+    df.ods$SHOP_ORDER <- as.character(df.ods$SHOP_ORDER)
+    
+    if(i == 1){
+      df.production.log <- df.ods
+    } else { 
+      df.production.log <- dplyr::bind_rows(df.production.log, df.ods)
+    }   
+  }
+  save(df.production.log, file="Data/production_log.RData")
+}
+
+mergeAllActivityLog <- function(){
+  require(dplyr)
+  file.names <- dir("DataWip", pattern =".RData")
+  
+  for (i in 1:(length(file.names)-1)){
+    t1 <- as.POSIXct("2017-01-01") + 3600 * 24 * i
+    t2 <- t1 + 3600 * 24 
+    
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+    
+    print(t1)
+    load(file = paste("DataWip/", t1, ".RData", sep = ""))
+    df.ods$ROUTER_REVISION <- as.character(df.ods$ROUTER_REVISION)
+    
+    if(i == 1){
+      df.production.log <- df.ods
+    } else { 
+      df.production.log <- dplyr::bind_rows(df.production.log, df.ods)
+    }   
+  }
+  save(df.production.log, file="DataWip/activity_log.RData")
+}
+
 # Legacy stuff, thats not really a function but ODS database retrieval
 notRun <- function(){
 
@@ -195,4 +283,6 @@ df.wip.shop.order  <- sqlQuery(db, "SELECT TOP 1000 * FROM dbo.WIP_SHOP_ORDER")
 #  FROM [SAPMEODS].[dbo].[AR_SFC]
 #where ITEM_BO like 'ItemBO:EEEL1,41908%'
 #order by ACTUAL_COMP_DATE desc
+
+
 }
