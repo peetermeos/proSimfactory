@@ -4,7 +4,8 @@ findRepairQueueService <- function(){
   library("jsonlite")
   
   load("c:/Temp/2017-01-18.RData")
-  print("Loading successful")
+  print("Looking for failed items and reporting their last known position")
+  print("Loading data successful")
   df <- df.ods
   only.fails <- TRUE
   
@@ -79,6 +80,7 @@ findRepairQueueService <- function(){
 
   plotStr <- paste("var data = ", c, ";",
                    "var layout = {
+                          title: 'Failed item, their last known activities and the time since we heard from them',
                           yaxis: {
                                 title: 'Time in queue [h]'
                           },
@@ -100,6 +102,6 @@ api <- updateService(
   code = findRepairQueueService,
   descr = "Find fails and repairs",
   outputs = list(result = "character"),
-  v = "v1.3.0"
+  v = "v1.4.0"
 )
 

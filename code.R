@@ -8,9 +8,6 @@
 library(mrsdeploy)
 library(reshape2)
 
-
-
-
 remoteLogin("http://localhost:12800",
             username = "admin",
             password = "Proekspert1!",
