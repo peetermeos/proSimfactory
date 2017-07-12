@@ -169,9 +169,10 @@ findRepairQueue <- function(df, only.fails = FALSE){
   if (only.fails) df <- df[df$failure == TRUE, ]
 
   df <- df[order(df$event_end), ]
-  df$waited <- as.numeric(difftime(as.POSIXct(t2), df$event_end, units = "hours"))
+  #df$waited <- as.numeric(difftime(df$event_end, as.POSIXct(t2), units = "hours"))
+  df$waited <- as.numeric(difftime(max(df$event_end), df$event_end, units = "hours"))
   
-  return(df)
+  return(df[, c("SFC", "OPERATION", "RESRCE", "waited")])
 }
 
 #' Hourly operation flow
