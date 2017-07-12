@@ -1,37 +1,40 @@
-manualTransmission <- function(hp, wt) {
-  newdata <- data.frame(hp = hp, wt = wt)
-  predict(carsModel, newdata, type = "response")
+
+library(mrsdeploy)
+
+randomService <- function(num) {
+  #print("Console output")
+  rnorm(1)
 }
 
 carsModel <- glm(formula = am ~ hp + wt, data = mtcars, family = binomial)
 
-remoteLogin("http://mef3000.prx:12800",
+remoteLogin("http://192.168.40.97:12800",
             username = "admin",
             password = "Proekspert1!",
             session = FALSE)
 
-serviceName <- paste0("mtService", round(as.numeric(Sys.time()), 0))
+serviceName <- "randomService"
 
 api <- publishService(
   serviceName,
-  code = manualTransmission,
+  code = randomService,
   model = carsModel,
-  inputs = list(hp = "numeric", wt = "numeric"),
+  inputs = list(num = "numeric"),
   outputs = list(answer = "numeric"),
-  v = "v1.0.0"
+  v = "v1.5.0"
 )
 
 print(api$capabilities())
 
-result <- api$manualTransmission(120, 2.8)
-print(result$output("answer"))
-swagger <- api$swagger()
-cat(swagger)
+#result <- api$manualTransmission(120, 2.8)
+#print(result$output("answer"))
+#swagger <- api$swagger()
+#cat(swagger)
 
 
-result <- deleteService("mtService1499165570", "v1.0.0")
-print(result)
+result <- deleteService("randomService", "v1.3.0")
+#print(result)
 
 serviceAll <- listServices()
 mtServiceAll <- listServices("mtService1499165570")
-print(mtServiceAll)
+print(serviceAll)
