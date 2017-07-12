@@ -7,7 +7,7 @@
 
 library(RODBC)
 
-sql #' Initalise SQL setup for data analysis
+#' Initalise SQL setup for data analysis
 #'
 #' @param type string c("ODS", "WIP")
 #'
