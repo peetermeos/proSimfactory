@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 deploy <- function(){
   title <- "DailyWorkDistribution"
-  version = "v0.0.1"
+  version = "v0.0.2"
   description <- "Distribution of work between resources in past 24 hours"
   inputs = list()
   outputs = list(result = "character")
@@ -83,9 +83,10 @@ serviceCode <- function(){
   # Find the event end time
   df$event_end <- apply(df[,-(1:3)], 1, max, na.rm = TRUE)
   
-  df$waited <- round(as.numeric(difftime(max(df$event_end), df$event_end, units = "hours")),2)
-   
-  df <- df[, c("SFC", "OPERATION", "RESRCE", "waited")]
+  # df$waited <- round(as.numeric(difftime(max(df$event_end), df$event_end, units = "hours")),2)
+  
+  df <- df[, c("SFC", "OPERATION", "RESRCE", "event_end")]
+  names(df)[names(df) %in% "event_end"] <- "time"
   
   printLog("Creating plot")
   c <- "["
@@ -95,7 +96,7 @@ serviceCode <- function(){
       first <- FALSE
     else
       c <- paste(c, ", ", sep = "")
-      c <- paste(c, "{y: [", paste(df$waited[df$RESRCE == i], collapse = ","),"]",
+      c <- paste(c, "{y: [", paste(df$time[df$RESRCE == i], collapse = ","),"]",
                  ",x: [", paste(paste("'", df$OPERATION[df$RESRCE == i], "'", sep = ""), collapse = ","),"]",
                  ", type: 'box', name: '", i,"', boxpoints: 'all', jitter: 0.4, marker: {opacity: 0.75}}", sep = "")
   }
@@ -116,7 +117,7 @@ serviceCode <- function(){
                    sep =  "");
 
   printLog("Returning dataset")
-  s <- toJSON(list(result = data.frame(), plot = plotStr))
+  s <- toJSON(list(result = df, plot = plotStr))
   return(s)
 }
 

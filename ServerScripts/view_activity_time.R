@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 deploy <- function(){
   title <- "dailyActivity"
-  version = "v0.0.1"
+  version = "v0.0.2"
   description <- "Shop floor activity for past 24 hours"
   inputs = list(operation = "character")
   outputs = list(result = "character")

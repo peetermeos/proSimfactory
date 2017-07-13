@@ -3,7 +3,7 @@ source("ServerScripts/utils.R")
 deploy <- function(){
   title <- "FindFailsRepairs"
   version = "v0.0.1"
-  description <- "Find fails and repairs"
+  description <- "Find fails and repairs in past 24 hours"
   inputs = list()
   outputs = list(result = "character")
   
@@ -141,7 +141,7 @@ serviceCode <- function(){
 
   plotStr <- paste("var data = ", c, ";",
                    "var layout = {
-                          title: 'Failed item, their last known activities and the time since we heard from them',
+                          title: 'Failed items, their last known activities and the time since we heard from them',
                           yaxis: {
                                 title: 'Time in queue [h]'
                           },
