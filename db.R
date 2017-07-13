@@ -150,6 +150,26 @@ getAllProductionLog <- function(){
   }
 }
 
+getSfcHistory <- function(){
+  for (i in 0:185){
+    t1 <- as.POSIXct("2017-01-01") + 3600 * 24 * i
+    t2 <- t1 + 3600 * 24 
+    
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+    
+    print(t1)
+    
+    df.ods  <- sqlQuery(db, paste("SELECT * 
+                                   FROM dbo.ODS_SFC_ID_HISTORY_WIP 
+                                   WHERE (REASON = 'S' OR REASON = 'P') 
+                                  AND DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep=""))
+    
+    save(df.ods, file = paste("Data/SFCHist/", t1, ".RData", sep = ""))
+    
+  }
+}
+
 getAllEventLog <- function(){
   for (i in 0:127){
     t1 <- as.POSIXct("2017-03-01") + 3600 * 24 * i
