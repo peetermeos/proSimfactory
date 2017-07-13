@@ -117,7 +117,7 @@ serviceCode <- function(){
                    sep =  "");
 
   printLog("Returning dataset")
-  s <- toJSON(list(result = df, plot = plotStr))
+  s <- toJSON(list(result = data.frame(), plot = plotStr))
   return(s)
 }
 

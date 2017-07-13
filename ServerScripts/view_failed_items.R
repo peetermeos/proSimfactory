@@ -2,15 +2,15 @@ source("ServerScripts/utils.R")
 
 deploy <- function(){
   title <- "FindFailsRepairs"
-  version = "v0.0.1"
-  description <- "Find fails and repairs in past 24 hours"
+  version = "v0.1.1"
+  description <- "Fails in past 24 hours in hourly heatmap"
   inputs = list()
   outputs = list(result = "character")
   
   inject(serviceCode, title, version, description, inputs, outputs)
 }
 
-#' Title
+#' Creates summary of failed SFCs in past 24 hrs
 #'
 #' @return
 #' @export
@@ -44,12 +44,12 @@ serviceCode <- function(){
   #load("c:/Temp/2017-01-18.RData")
   #df <- df.ods
   
-  t2 <- as.POSIXct(Sys.Date()) 
-  t1 <- t2 - 3600 * 24 
-  
+  t2 <- as.POSIXct(Sys.Date())
+  t1 <- t2 - 3600 * 24
+
   t1 <- format(t1, "%Y-%m-%d")
   t2 <- format(t2, "%Y-%m-%d")
-  
+
   sql <- list()
   sql$db.name <- "SAPMEWIP"
   sql$host.name <- "eeel163.encnet.ead.ems"
@@ -57,7 +57,7 @@ serviceCode <- function(){
   sql$port <- ""
   sql$user.name <- "proekspert"
   sql$pwd <- "proekspert1!"
-  
+
   s.odbc <- paste("DRIVER=", sql$driver.name,
                   ";Database=", sql$db.name,
                   ";Server=", sql$host.name,
@@ -65,23 +65,21 @@ serviceCode <- function(){
                   ";PROTOCOL=TCPIP",
                   ";UID=", sql$user.name,
                   ";PWD=", sql$pwd,
-                  ";TDS_Version=8.0", sep = "")  
+                  ";TDS_Version=8.0", sep = "")
   db <- odbcDriverConnect(s.odbc)
-  
-  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION, 
+
+  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION,
                             ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
                             FROM dbo.ACTIVITY_LOG
                             WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
-  
+
   odbcClose(db)
-  if (nrow(df) > 2) 
+  if (nrow(df) > 2)
     printLog("Loading successful")
   else{
     printLog("Loading failed")
     stop()
   }
-  
-  only.fails <- TRUE
   
   # Pivot on action codes
   df <- dcast(data = df, SFC + RESRCE + OPERATION ~ ACTION_CODE, drop = TRUE, value.var = "DATE_TIME",
@@ -100,24 +98,15 @@ serviceCode <- function(){
   df <- tagFailsRepairs(df)
   printLog("Tagging fails and repairs successful")
    
-  ## Take last of every SFC
-  # This bit seems to fail
-  df1 <- group_by(df, SFC) 
-  df1 <- filter(df1, event_end == max(event_end))
-  
-  df1 <- df1[!is.na(df1$RESRCE),]
-  
-  df <- df1 
-  
   # Now we should have a list containing data about last known event of every SFC
   # Filter out fails
-  if (only.fails) df <- df[df$failure == TRUE, ]
+  df <- df[df$failure == TRUE, ]
    
-  df <- df[order(df$event_end), ]
-  #df$waited <- as.numeric(difftime(df$event_end, as.POSIXct(t2), units = "hours"))
-  df$waited <- round(as.numeric(difftime(max(df$event_end), df$event_end, units = "hours")), 2)
+  df$hour <- format(as.POSIXct(df$event_end), format = "%d %H")
+  df$count <- 1
   
-  df <- df[, c("SFC", "OPERATION", "RESRCE", "waited")]
+  df <- aggregate(data = df, count ~ RESRCE  + hour, FUN = "sum", na.rm = TRUE)
+  df$hour <- factor(df$hour)
   
   printLog("Saving dataset")
   write.csv(df, file = "data.csv")
@@ -125,35 +114,48 @@ serviceCode <- function(){
   s <- summary(df)
   print(s)
   
+  lr <- levels(df$RESRCE)
+  lh <- levels(df$hour)
+    
   printLog("Creating the plot")
   c <- "["
-  first <- TRUE
-  for (i in unique(df$RESRCE)) {
-    if (first)
-      first <- FALSE
-    else
-      c <- paste(c, ", ", sep = "")
-    c <- paste(c, "{y: [", paste(df$waited[df$RESRCE == i], collapse = ","),"]",
-               ",x: [", paste(paste("'", df$OPERATION[df$RESRCE == i], "'", sep = ""), collapse = ","),"]",
-               ", type: 'box', name: '", i,"', boxpoints: 'all', jitter: 0.3}", sep = "")
+  
+  c <- paste(c, "{y: ['", paste(lr, collapse = "','"),"']",
+                ",x: ['", paste(lh,   collapse = "','"),"']",
+                ",z: [", sep = "")
+    
+  for (i in lr){
+    c <- paste(c, "[", sep = "")
+    for(j in lh){
+      n <- df$count[df$RESRCE == i & df$hour == j]
+      if (length(df$count[df$RESRCE == i & df$hour == j]) == 0)
+        n <- 0
+
+      c <- paste(c, n, sep = "")
+      if (j != lh[length(lh)]) c <- paste(c, ",", sep = "")
+    }
+    
+    c <- paste(c, "]", sep = "")
+    
+    if (i != lr[length(lr)])
+      c <- paste(c, ",", sep = "")
+    
   }
-  c <- paste(c, "]", sep = "")
+               
+  c <- paste(c, "]", ", type: 'heatmap'}]", sep = "")
 
   plotStr <- paste("var data = ", c, ";",
                    "var layout = {
-                          title: 'Failed items, their last known activities and the time since we heard from them',
-                          yaxis: {
-                                title: 'Time in queue [h]'
-                          },
+                          title: 'Failed items by resources and failure times',
                           xaxis: {
-                            title: 'Operation'
-                          },
-                          boxmode: 'group'
+                            title: 'Failure time (day hour)'
+                          }
                    };
                     myChart = document.getElementById('myChart');
                     Plotly.newPlot(myChart, data, layout);", sep = "");    
     
   printLog("Returning dataset")
-  s <- toJSON(list(result = data.frame(df[,c(1:4)]), plot = plotStr))
+  s <- toJSON(list(result = df, plot = plotStr))
+  #return(plotStr)
   return(s)
 }
