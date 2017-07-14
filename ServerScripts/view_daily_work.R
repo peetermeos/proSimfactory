@@ -8,13 +8,17 @@ metadata <- list(
   outputs = list(result = "character")
 )
 
-#' Title
+#' Calculates and plots the daily workflow. Script can either be used
+#' by hand or loaded into R server and viewed by simFactory rapid prototyping
+#' web interface. The latter is preferred, since the plot returned as
+#' Javascript code for plotly.js
 #'
-#' @return
+#' @return JSON string containing a plot describing daily actions
 #' @export
 #' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
+#' 
 serviceCode <- function(){
   library("RODBC")
   library("reshape2")
