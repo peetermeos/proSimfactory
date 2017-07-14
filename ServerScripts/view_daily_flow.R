@@ -1,14 +1,12 @@
 source("ServerScripts/utils.R")
 
-deploy <- function(){
-  title <- "DailyComponentFlow"
-  version = "v0.0.1"
-  description <- "SFC workflow for past 24 hrs"
-  inputs = list()
+metadata <- list(
+  title <- "DailyComponentFlow",
+  version = "v0.0.2",
+  description <- "SFC workflow for past 24 hrs",
+  inputs = list(),
   outputs = list(result = "character")
-  
-  inject(serviceCode, title, version, description, inputs, outputs)
-}
+)
 
 #' Title
 #'
@@ -28,15 +26,15 @@ serviceCode <- function(){
   printLog("Init")
   printLog("Loading started, getting last 24 hrs")
   
-  #load("c:/Temp/2017-01-18.RData")
-  #df <- df.ods
+  # load("c:/Temp/2017-01-18.RData")
+  # df <- df.ods
   
-  t2 <- as.POSIXct(Sys.Date()) 
-  t1 <- t2 - 3600 * 24 
-  
+  t2 <- as.POSIXct(Sys.Date())
+  t1 <- t2 - 3600 * 24
+
   t1 <- format(t1, "%Y-%m-%d")
   t2 <- format(t2, "%Y-%m-%d")
-  
+
   sql <- list()
   sql$db.name <- "SAPMEWIP"
   sql$host.name <- "eeel163.encnet.ead.ems"
@@ -44,7 +42,7 @@ serviceCode <- function(){
   sql$port <- ""
   sql$user.name <- "proekspert"
   sql$pwd <- "proekspert1!"
-  
+
   s.odbc <- paste("DRIVER=", sql$driver.name,
                   ";Database=", sql$db.name,
                   ";Server=", sql$host.name,
@@ -52,16 +50,16 @@ serviceCode <- function(){
                   ";PROTOCOL=TCPIP",
                   ";UID=", sql$user.name,
                   ";PWD=", sql$pwd,
-                  ";TDS_Version=8.0", sep = "")  
+                  ";TDS_Version=8.0", sep = "")
   db <- odbcDriverConnect(s.odbc)
-  
-  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION, 
+
+  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION,
                             ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
                             FROM dbo.ACTIVITY_LOG
                             WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
-  
+
   odbcClose(db)
-  if (nrow(df) > 2) 
+  if (nrow(df) > 2)
     printLog("Loading successful")
   else{
     printLog("Loading failed")
@@ -83,39 +81,61 @@ serviceCode <- function(){
   # Find the event end time
   df$event_end <- apply(df[,-(1:3)], 1, max, na.rm = TRUE)
   
-  # df$waited <- round(as.numeric(difftime(max(df$event_end), df$event_end, units = "hours")),2)
-  
   df <- df[, c("SFC", "OPERATION", "RESRCE", "event_end")]
   names(df)[names(df) %in% "event_end"] <- "time"
   
-  printLog("Creating plot")
+  # Prepare data for plotting
+  df$hour <- format(as.POSIXct(df$time), format = "%d %b %H:00 ")
+  df$count <- 1
+  
+  df <- aggregate(data = df, count ~ RESRCE  + hour, FUN = "sum", na.rm = TRUE)
+  df$hour <- factor(df$hour)
+  
+  # Order levels alphabetically
+  df$RESRCE <- factor(df$RESRCE, levels = levels(df$RESRCE)[order(levels(df$RESRCE))])
+  
+  lr <- levels(df$RESRCE)
+  lh <- levels(df$hour)
+  
+  ##### Creating a plot ######
+  printLog("Creating the plot")
   c <- "["
-  first <- TRUE
-  for (i in unique(df$RESRCE)) {
-    if (first)
-      first <- FALSE
-    else
-      c <- paste(c, ", ", sep = "")
-      c <- paste(c, "{y: [", paste(df$time[df$RESRCE == i], collapse = ","),"]",
-                 ",x: [", paste(paste("'", df$OPERATION[df$RESRCE == i], "'", sep = ""), collapse = ","),"]",
-                 ", type: 'box', name: '", i,"', boxpoints: 'all', jitter: 0.4, marker: {opacity: 0.75}}", sep = "")
+  
+  c <- paste(c, "{y: ['", paste(lr, collapse = "','"),"']",
+             ",x: ['", paste(lh,   collapse = "','"),"']",
+             ",z: [", sep = "")
+  
+  for (i in lr){
+    c <- paste(c, "[", sep = "")
+    for(j in lh){
+      n <- df$count[df$RESRCE == i & df$hour == j]
+      if (length(df$count[df$RESRCE == i & df$hour == j]) == 0)
+        n <- 0
+      
+      c <- paste(c, n, sep = "")
+      if (j != lh[length(lh)]) c <- paste(c, ",", sep = "")
+    }
+    
+    c <- paste(c, "]", sep = "")
+    
+    if (i != lr[length(lr)])
+      c <- paste(c, ",", sep = "")
+    
   }
-  c <- paste(c, "]", sep = "")
-
+  
+  c <- paste(c, "]", ", type: 'heatmap'}]", sep = "")
+  
   plotStr <- paste("var data = ", c, ";",
                    "var layout = {
-                          yaxis: {
-                                title: 'Time'
-                          },
+                          title: 'SFC flow in past 24 hrs',
                           xaxis: {
-                            title: 'Operation'
-                          },
-                          boxmode: 'group'
+                            title: 'Time (day hour)'
+                          }
                    };
                     myChart = document.getElementById('myChart');
-                    Plotly.newPlot(myChart, data, layout);",
-                   sep =  "");
-
+                    Plotly.newPlot(myChart, data, layout);", sep = "");    
+  
+  ##### Returning dataset ##### 
   printLog("Returning dataset")
   s <- toJSON(list(result = data.frame(), plot = plotStr))
   return(s)

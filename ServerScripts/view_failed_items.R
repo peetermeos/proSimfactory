@@ -1,14 +1,13 @@
 source("ServerScripts/utils.R")
 
-deploy <- function(){
-  title <- "FindFailsRepairs"
-  version = "v0.1.3"
-  description <- "Fails in past 24 hours in hourly heatmap and summary table"
-  inputs = list()
+metadata <- list(
+  title <- "FindFailsRepairs",
+  version = "v0.1.3",
+  description <- "Fails in past 24 hours in hourly heatmap and summary table",
+  inputs = list(),
   outputs = list(result = "character")
-  
-  inject(serviceCode, title, version, description, inputs, outputs)
-}
+)
+
 
 #' Creates summary of failed SFCs in past 24 hrs
 #'
@@ -141,6 +140,9 @@ serviceCode <- function(){
   
   df <- aggregate(data = df, count ~ RESRCE  + hour, FUN = "sum", na.rm = TRUE)
   df$hour <- factor(df$hour)
+  
+  # Order levels alphabetically
+  df$RESRCE <- factor(df$RESRCE, levels = levels(df$RESRCE)[order(levels(df$RESRCE))])
   
   lr <- levels(df$RESRCE)
   lh <- levels(df$hour)

@@ -1,14 +1,12 @@
 source("ServerScripts/utils.R")
 
-deploy <- function(){
-  title <- "DailyWorkDistribution"
-  version = "v0.0.2"
-  description <- "Distribution of work between resources in past 24 hours"
-  inputs = list()
+metadata <- list(
+  title <- "DailyWorkDistribution",
+  version = "v0.0.2",
+  description <- "Distribution of work between resources in past 24 hours",
+  inputs = list(),
   outputs = list(result = "character")
-  
-  inject(serviceCode, title, version, description, inputs, outputs)
-}
+)
 
 #' Title
 #'

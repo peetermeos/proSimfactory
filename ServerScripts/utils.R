@@ -96,6 +96,25 @@ inject <- function(func, title, version, description="", inputs, outputs){
   return(api)
 }
 
+#' Title
+#'
+#' @param metadata 
+#' @param serviceCode 
+#'
+#' @return
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+deploy <- function(metadata = metadata, serviceCode = serviceCode){
+  print("Deploying to...")
+  inject(serviceCode, metadata$title, 
+         metadata$version, 
+         metadata$description, 
+         metadata$inputs, 
+         metadata$outputs)
+}
+
 #' Returns a data frame of listed services and versions
 #'
 #' @return data frame

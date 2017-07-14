@@ -1,3 +1,13 @@
+source("ServerScripts/utils.R")
+
+metadata <- list(
+  title <- "HistoricalActivityDuration",
+  version = "v0.3.0",
+  description = "Historical length of activities by operation",
+  inputs = list(operation = "character", resource = "character"),
+  outputs = list(result = "character")
+)
+
 serviceCode <- function(operation = "", resource = ""){
   library("jsonlite")
   
@@ -77,31 +87,3 @@ serviceCode <- function(operation = "", resource = ""){
   s <- toJSON(list(result = df3, plot = plotStr))
   return(s)
   }
-
-version <- "v0.3.0"
-
-inject <- function(type="update", version=version){
-  if (type == "publish"){
-    api <- publishService(
-      name = "HistoricalActivityDuration",
-      code = serviceCode,
-      descr = "Historical length of activities by operation",
-      inputs = list(operation = "character"),
-      outputs = list(result = "character"),
-      v = "v0.3.0"
-    )
-  }
-  
-  if (type == "update"){
-    api <- updateService(
-      name = "HistoricalActivityDuration",
-      code = serviceCode,
-      descr = "Historical length of activities by operation",
-      inputs = list(operation = "character", resource = "character"),
-      outputs = list(result = "character"),
-      v = "v0.3.0"
-    )  
-  }
-  print(paste(Sys.time(), "done", sep=": "))
-  return(api)
-}

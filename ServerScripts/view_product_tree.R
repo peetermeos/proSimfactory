@@ -1,14 +1,12 @@
 source("ServerScripts/utils.R")
 
-deploy <- function(){
-  title <- "FindFailsRepairs"
-  version = "v0.1.1"
-  description <- "Fails in past 24 hours in hourly heatmap"
-  inputs = list()
+metadata <- list(
+  title <- "CreateProductTree",
+  version = "v0.1.1",
+  description <- "Creates SFC hierarchy",
+  inputs = list(),
   outputs = list(result = "character")
-  
-  inject(serviceCode, title, version, description, inputs, outputs)
-}
+)
 
 #' Creates summary of failed SFCs in past 24 hrs
 #'
