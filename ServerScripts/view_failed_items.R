@@ -2,14 +2,15 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "FindFailsRepairs",
-  version = "v0.1.3",
-  description = "Fails in past 24 hours in hourly heatmap and summary table",
+  version = "v0.2.0",
+  description = paste("Fails in past 24 hours in hourly heatmap and summary table.",
+                     " Split SFCs are represented as their last known code.", sep = ""),
   inputs = list(),
   outputs = list(result = "character")
 )
 
 
-#' Creates summary of failed SFCs in past 24 hrs
+#' Creates summary of failed SFCs in past 24 hrs. SFCs are represented as their last known code.
 #'
 #' @return Dataframe of failed items and a plotly plot of failed items.
 #' @export
@@ -40,16 +41,15 @@ serviceCode <- function(){
   
   ##### Data import #####    
   printLog("Init")
-  printLog("Loading started, getting last 24 hrs")
+  printLog("Event log loading started, getting last 24 hrs of events")
   
-  #load("c:/Temp/2017-01-18.RData")
-  #df <- df.ods
+  #load("tmp.RData")
   
-  t2 <- as.POSIXct(Sys.Date())
+  t2 <- as.POSIXct(Sys.time())
   t1 <- t2 - 3600 * 24
 
-  t1 <- format(t1, "%Y-%m-%d")
-  t2 <- format(t2, "%Y-%m-%d")
+  t1 <- format(t1, "%Y-%m-%d %H:%M:%S")
+  t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
 
   sql <- list()
   sql$db.name <- "SAPMEWIP"
@@ -69,12 +69,12 @@ serviceCode <- function(){
                   ";TDS_Version=8.0", sep = "")
   db <- odbcDriverConnect(s.odbc)
 
-  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION,
+  df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, OPERATION, ITEM, ITEM_REVISION,
                             ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
                             FROM dbo.ACTIVITY_LOG
                             WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
-
   odbcClose(db)
+
   if (nrow(df) > 2)
     printLog("Loading successful")
   else{
@@ -82,8 +82,71 @@ serviceCode <- function(){
     stop()
   }
 
-  ###### Data Analysis ######
+  printLog("SFC history loading started, getting last 24 hrs of events")
+
+  sql$db.name <- "SAPMEODS"
+  sql$host.name <- "eeel164.encnet.ead.ems"
+
+  s.odbc <- paste("DRIVER=", sql$driver.name,
+                  ";Database=", sql$db.name,
+                  ";Server=", sql$host.name,
+                  ";Port=", sql$port,
+                  ";PROTOCOL=TCPIP",
+                  ";UID=", sql$user.name,
+                  ";PWD=", sql$pwd,
+                  ";TDS_Version=8.0", sep = "")
+  db <- odbcDriverConnect(s.odbc)
+
+  df.link <- sqlQuery(db, paste("SELECT *
+             FROM dbo.ODS_SFC_ID_HISTORY_WIP
+             WHERE (REASON = 'S' OR REASON = 'P')
+             AND DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
+  odbcClose(db)
+
+  if (nrow(df.link) > 2)
+    printLog("Loading successful")
+  else{
+    printLog("Loading failed")
+    stop()
+  }
   
+  #save(df, df.link, file = "tmp.RData")
+  #stop("Download complete.")
+
+  ###### Data Analysis ######
+  printLog("Processing SFC parent - child linkages.")
+  
+  # First we need to go through the SFC history dataset and pick out parent/sibling pairs
+  df.link$child <- gsub("^.*,","", as.character(df.link$SFC_BO))
+  df.link$child <- factor(df.link$child)
+  
+  # Take out lines where SFC has mutated into itself
+  #df.link <- df.link[as.character(df.link$child) != as.character(df.link$SFC), ]
+  
+  # Rename SFC to parent
+  names(df.link)[names(df.link) %in% "SFC"] <- "parent"
+  
+  # We use only parent child and datetime
+  df.link <- df.link[, c("parent", "child")]
+  
+  # Now we need to replace all the SFCs that are present in link table.
+  df <- merge(df, df.link, by.x = "SFC", by.y = "parent", all.x = TRUE, all.y = TRUE)
+  
+  #If there's no mapping use old SFC
+  df$child <- as.character(df$child)
+  df$SFC <- as.character(df$SFC)
+  df$child[is.na(df$child)] <- df$SFC[is.na(df$child)]
+  
+  # We only need child SFCs
+  df$SFC <- NULL
+  
+  # Now take unique rows
+  df <- unique(df)
+  
+  # Rename child to SFC and we are good to go
+  names(df)[names(df) %in% "child"] <- "SFC"
+  
+  ##### Now the rest of the analysis #####
   # Pivot on action codes
   df <- dcast(data = df, SFC + RESRCE + OPERATION ~ ACTION_CODE, drop = TRUE, value.var = "DATE_TIME",
               fun.aggregate = mean, na.rm = TRUE)
@@ -97,12 +160,12 @@ serviceCode <- function(){
   
   # Order the dataset by date
   df <- df[order(df$event_end), ]
-
+  
   # Find fails and repairs
   printLog("Tagging events with LOG_FAILURE and no CLOSE_FAILURE")
   printLog("Tagging events with FAIL")
   df <- tagFailsRepairs(df)
-  
+
   # Now we have fail events, filter them out
   df.fail <- df[df$failure == TRUE, ]
   df.fail$failed.at   <- df.fail$RESRCE
@@ -133,7 +196,7 @@ serviceCode <- function(){
   
   printLog("Saving dataset")
   write.csv(df.ret, file = "data.csv")
-
+  
   # Prepare data for plotting
   df$hour <- format(as.POSIXct(df$event_end), format = "%d %b %H:00 ")
   df$count <- 1
@@ -149,42 +212,33 @@ serviceCode <- function(){
    
   ##### Creating a plot ######
   printLog("Creating the plot")
-  c <- "["
-  
-  c <- paste(c, "{y: ['", paste(lr, collapse = "','"),"']",
-                ",x: ['", paste(lh,   collapse = "','"),"']",
-                ",z: [", sep = "")
-    
-  for (i in lr){
-    c <- paste(c, "[", sep = "")
-    for(j in lh){
-      n <- df$count[df$RESRCE == i & df$hour == j]
-      if (length(df$count[df$RESRCE == i & df$hour == j]) == 0)
-        n <- 0
+  plotStr <- "var data = [";
 
-      c <- paste(c, n, sep = "")
-      if (j != lh[length(lh)]) c <- paste(c, ",", sep = "")
+  first.row <- TRUE  
+  for (i in lr) {
+    y <- rep(0, length(lh))
+    for (j in lh) {
+      # Y vector
+      y[which(lh == j)] <- ifelse(length(df$count[df$hour == j & df$RESRCE == i]) > 0, 
+                                  df$count[df$hour == j & df$RESRCE == i], 0)
     }
     
-    c <- paste(c, "]", sep = "")
-    
-    if (i != lr[length(lr)])
-      c <- paste(c, ",", sep = "")
-    
-  }
-               
-  c <- paste(c, "]", ", type: 'heatmap'}]", sep = "")
+    if (sum(y) > 0) {
+      ifelse(!first.row, plotStr <- paste(plotStr, ", ", sep = ""), first.row <- FALSE)
+      
+      plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines',", sep = "")
+      plotStr <- paste(plotStr, "name: '", i, "',", sep = "")
+      # Assemble x and y
+      plotStr <- paste(plotStr, "x: ['", paste(lh, collapse = "','"),"'],", sep = "")
+      plotStr <- paste(plotStr, "y: [", paste(y, collapse = ","),"]", sep = "")
 
-  plotStr <- paste("var data = ", c, ";",
-                   "var layout = {
-                          title: 'Failed items by resources and failure times',
-                          xaxis: {
-                            title: 'Failure time (day hour)'
-                          }
-                   };
-                    myChart = document.getElementById('myChart');
-                    Plotly.newPlot(myChart, data, layout);", sep = "");    
-   
+      plotStr <- paste(plotStr, "}", sep = "")
+    }
+  }
+  
+  plotStr <- paste(plotStr, "myChart = document.getElementById('myChart');
+                             Plotly.newPlot(myChart, data, layout);", sep = ""); 
+
   ##### Returning dataset ##### 
   printLog("Returning dataset")
   s <- toJSON(list(result = df.ret, plot = plotStr))
