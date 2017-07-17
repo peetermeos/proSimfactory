@@ -1,7 +1,7 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "HistoricalActivityDuration",
+  title = "HistoricalActivityDuration",
   version = "v0.3.0",
   description = "Historical length of activities by operation",
   inputs = list(operation = "character", resource = "character"),
@@ -11,7 +11,7 @@ metadata <- list(
 serviceCode <- function(operation = "", resource = ""){
   library("jsonlite")
   
-  print(paste(Sys.time(), "Init", sep=": "))
+  print(paste(Sys.time(), "Init", sep = ": "))
   
   print("Inputs")
   print(paste("operation:", operation))

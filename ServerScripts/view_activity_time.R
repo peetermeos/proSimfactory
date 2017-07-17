@@ -1,20 +1,21 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "dailyActivity",
-  version = "v0.0.2",
-  description <- "Shop floor activity for past 24 hours",
+  title = "DailyActivity",
+  version = "v0.0.3",
+  description = "Shop floor activity for past 24 hours",
   inputs = list(operation = "character"),
   outputs = list(result = "character")
 )
 
-#' Title
+#' Summarises daily activity on the shop floor.
 #' @version v0.0.1
 #' 
 #' @param operation 
 #'
-#' @return
-#' @export
+#' @return list of data frame summarising the activity (by median and sd) 
+#' and plotly plot.
+#' @export 
 #' @author Peeter Meos, Proekspert AS
 #' 
 #'

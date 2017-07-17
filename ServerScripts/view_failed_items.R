@@ -1,9 +1,9 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "FindFailsRepairs",
+  title = "FindFailsRepairs",
   version = "v0.1.3",
-  description <- "Fails in past 24 hours in hourly heatmap and summary table",
+  description = "Fails in past 24 hours in hourly heatmap and summary table",
   inputs = list(),
   outputs = list(result = "character")
 )
@@ -11,7 +11,7 @@ metadata <- list(
 
 #' Creates summary of failed SFCs in past 24 hrs
 #'
-#' @return
+#' @return Dataframe of failed items and a plotly plot of failed items.
 #' @export
 #' @author Peeter Meos, Proekspert AS
 #'

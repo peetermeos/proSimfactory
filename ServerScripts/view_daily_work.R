@@ -1,9 +1,9 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "DailyWorkDistribution",
+  title = "DailyWorkDistribution",
   version = "v0.0.2",
-  description <- "Distribution of work between resources in past 24 hours",
+  description = "Distribution of work between resources in past 24 hours",
   inputs = list(),
   outputs = list(result = "character")
 )
