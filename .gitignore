@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.RDataTmp
 
 *.Rproj
 *.RData
@@ -9,3 +10,5 @@
 *.xlsx
 *.pdf
 *.csv
+*.Trend
+*.protocol

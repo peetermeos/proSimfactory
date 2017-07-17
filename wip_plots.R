@@ -62,6 +62,33 @@ plotLastStatus <- function(df){
   return(grid.arrange(p1, p2, ncol = 2))
 }
 
+
+#' Plots barplot of resources
+#'
+#' @param df data frame containing last statuses of SFCs (RESRCE)
+#' @param title string containing plot title
+#'
+#' @return ggplot object
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotResource <- function(df, title = ""){
+  require(ggplot2)
+  
+  df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
+  
+  p <- ggplot(df, aes(x=ops.resrce, fill=ops.resrce)) +
+       geom_bar(stat = "count") +
+       guides(fill = FALSE) +
+       theme_bw() +
+       theme(axis.text.x = element_text(angle = 90))
+  
+  if (title != "") p <- p + ggtitle(title)
+  
+  return(p)
+}
+
 #' A shot at the last known status of an SFC crosstab
 #'
 #' @param df containing last operations, status codes for given SFC
@@ -89,6 +116,62 @@ plotStatusCrosstab <- function(df){
     scale_colour_gradient(low = "white", high = "black") +
     #scale_colour_gradientn(colours=rainbow(4)) +
     theme(axis.text.x = element_text(angle = 90))
+  
+ return(p)
+}
+
+
+#' Violin plot by resource 
+#'
+#' @param df 
+#' @param title 
+#'
+#' @return
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotWaitedTime <- function(df, title = ""){
+  require(ggplot2)
+  
+  df$ops.resrce <- paste(df$OPERATION, df$RESRCE, sep = " - ")
+  df$failure <- as.numeric(factor(df$failure, levels = c("FALSE", "TRUE"))) * 0.1
+  
+  p <- ggplot(df, aes(x = ops.resrce, y = waited, fill = ops.resrce)) +
+       geom_violin(scale = "width") +
+       geom_jitter(height = 0, width = 0.1, aes(size = failure, col = failure)) +
+       scale_size_continuous(range=c(0, 1)) + 
+       scale_y_continuous("Time since last reported event [hr]") +
+       scale_x_discrete("Operation and resource of last reported event") +
+       scale_color_gradient(low = "black", high = "red") +
+       guides(fill = FALSE, color = FALSE, size = FALSE) +
+       theme_bw() +
+       theme(axis.text.x = element_text(angle = 90))
+  
+  if (title != "") p <- p + ggtitle(title)
+  
+  return(p)
+}
+
+
+#' Plot of operations through time
+#'
+#' @param df data frame containing hourly summary of operations
+#'
+#' @return ggplot object
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+plotFlow <- function(df){
+  require(ggplot2)
+  require(scales)
+  
+  p <- ggplot(data = df, aes(x = hour, group = OPERATION, fill = OPERATION)) +
+    geom_bar(stat = "count", position = "stack") +
+    scale_x_continuous(breaks = pretty_breaks(20)) +
+    scale_y_continuous(breaks = pretty_breaks(20)) +
+    theme_bw()
   
   return(p)
 }
