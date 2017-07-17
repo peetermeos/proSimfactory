@@ -1,9 +1,9 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "dailyActivity",
+  title = "dailyActivity",
   version = "v0.0.2",
-  description <- "Shop floor activity for past 24 hours",
+  description = "Shop floor activity for past 24 hours",
   inputs = list(operation = "character"),
   outputs = list(result = "character")
 )
@@ -35,11 +35,11 @@ serviceCode <- function(operation = ""){
   #load("c:/Temp/2017-01-18.RData")
   #df <- df.ods
   
-  t2 <- as.POSIXct(Sys.Date()) 
-  t1 <- t2 - 3600 * 24 
+  t2 <- as.POSIXct(Sys.time())
+  t1 <- t2 - 3600 * 24
   
-  t1 <- format(t1, "%Y-%m-%d")
-  t2 <- format(t2, "%Y-%m-%d")
+  t1 <- format(t1, "%Y-%m-%d %H:%M:%S")
+  t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
   
   sql <- list()
   sql$db.name <- "SAPMEWIP"

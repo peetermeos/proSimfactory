@@ -1,9 +1,9 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "FindFailsRepairs",
+  title = "FindFailsRepairs",
   version = "v0.1.3",
-  description <- "Fails in past 24 hours in hourly heatmap and summary table",
+  description = "Fails in past 24 hours in hourly heatmap and summary table",
   inputs = list(),
   outputs = list(result = "character")
 )
@@ -45,11 +45,11 @@ serviceCode <- function(){
   #load("c:/Temp/2017-01-18.RData")
   #df <- df.ods
   
-  t2 <- as.POSIXct(Sys.Date())
+  t2 <- as.POSIXct(Sys.time())
   t1 <- t2 - 3600 * 24
-
-  t1 <- format(t1, "%Y-%m-%d")
-  t2 <- format(t2, "%Y-%m-%d")
+  
+  t1 <- format(t1, "%Y-%m-%d %H:%M:%S")
+  t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
 
   sql <- list()
   sql$db.name <- "SAPMEWIP"
