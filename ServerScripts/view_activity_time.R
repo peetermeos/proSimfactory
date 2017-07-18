@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "DailyActivity",
-  version = "v0.0.3",
+  version = "v0.0.4",
   description = "Shop floor activity for past 24 hours",
   inputs = list(operation = "character"),
   outputs = list(result = "character")
@@ -36,11 +36,11 @@ serviceCode <- function(operation = ""){
   #load("c:/Temp/2017-01-18.RData")
   #df <- df.ods
   
-  t2 <- as.POSIXct(Sys.Date()) 
-  t1 <- t2 - 3600 * 24 
+  t2 <- as.POSIXct(Sys.time())
+  t1 <- t2 - 3600 * 24
   
-  t1 <- format(t1, "%Y-%m-%d")
-  t2 <- format(t2, "%Y-%m-%d")
+  t1 <- format(t1, "%Y-%m-%d %H:%M:%S")
+  t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
   
   sql <- list()
   sql$db.name <- "SAPMEWIP"
@@ -119,8 +119,8 @@ serviceCode <- function(operation = ""){
                             title: 'Operation'
                           },
                           boxmode: 'group',
-                          title: 'Activity durations by operation'
-                          };
+                          title: 'Activity durations by operation between ", t1, " and ", t2,
+                          "};
 
                    myChart = document.getElementById('myChart');
                    Plotly.newPlot(myChart, data, layout);",
