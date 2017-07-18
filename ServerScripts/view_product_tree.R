@@ -2,13 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title <- "CreateProductTree",
-  version = "v0.1.1",
+  version = "v0.1.2",
   description <- "Creates SFC hierarchy",
   inputs = list(),
   outputs = list(result = "character")
 )
 
 #' Creates summary of failed SFCs in past 24 hrs
+#' @version v0.1.2
 #'
 #' @return
 #' @export
@@ -128,6 +129,6 @@ serviceCode <- function(){
 
 ##### Results #####    
   #printLog("Returning dataset")
-  #s <- toJSON(list(result = df, plot = plotStr))
+  #s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
   return(df.link)
 }

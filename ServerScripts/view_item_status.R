@@ -2,13 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "CurrentItemStatus",
-  version = "v0.0.2",
+  version = "v0.0.3",
   description =  "Shows a snapshot of item statuses. Can be filtered by item name. Regexp is allowed.",
   inputs = list(item = "character"),
   outputs = list(result = "character")
 )
 
 #' Shows a snapshot of item statuses.
+#' @version v0.0.3
 #'
 #' @return
 #' @export
@@ -122,7 +123,7 @@ serviceCode <- function(item = ""){
   ##### Returning dataset ##### 
   df <- dcast(data = df, ITEM~STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
   printLog("Returning dataset")
-  s <- toJSON(list(result = df, plot = plotStr))
+  s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
   return(s)
   }
 

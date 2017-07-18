@@ -2,14 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "DailyActivity",
-  version = "v0.0.4",
+  version = "v0.0.5",
   description = "Shop floor activity for past 24 hours",
   inputs = list(operation = "character"),
   outputs = list(result = "character")
 )
 
 #' Summarises daily activity on the shop floor.
-#' @version v0.0.1
+#' @version v0.0.5
 #' 
 #' @param operation 
 #'
@@ -136,6 +136,6 @@ serviceCode <- function(operation = ""){
   names(df2) <- c("Resource", "StandardDeviation")
   df <- merge(df1, df2, by = "Resource")
   
-  s <- toJSON(list(result = df, plot = plotStr))
+  s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
   return(s)
 }

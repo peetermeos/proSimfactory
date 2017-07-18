@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "DailyWorkDistribution",
-  version = "v0.0.2",
+  version = "v0.0.3",
   description = "Distribution of work between resources in past 24 hours",
   inputs = list(),
   outputs = list(result = "character")
@@ -12,6 +12,7 @@ metadata <- list(
 #' by hand or loaded into R server and viewed by simFactory rapid prototyping
 #' web interface. The latter is preferred, since the plot returned as
 #' Javascript code for plotly.js
+#' @version v0.0.3
 #'
 #' @return JSON string containing a plot describing daily actions
 #' @export
@@ -121,7 +122,7 @@ serviceCode <- function(){
 
   printLog("Returning dataset")
   write.table(plotStr, file="text.txt")
-  s <- toJSON(list(result = data.frame(), plot = plotStr))
+  s <- toJSON(list(result = data.frame(), plot = plotStr), na = "string", null = "list")
   return(s)
 }
 

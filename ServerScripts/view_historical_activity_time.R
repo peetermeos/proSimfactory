@@ -2,12 +2,22 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "HistoricalActivityDuration",
-  version = "v0.3.0",
+  version = "v0.3.1",
   description = "Historical length of activities by operation",
   inputs = list(operation = "character", resource = "character"),
   outputs = list(result = "character")
 )
 
+#' Title
+#' @version v0.3.1
+#'
+#' @param operation 
+#' @param resource 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 serviceCode <- function(operation = "", resource = ""){
   library("jsonlite")
   
@@ -84,6 +94,6 @@ serviceCode <- function(operation = "", resource = ""){
   df3 <- merge(df1, df2, by="Resource")
   
   print(paste(Sys.time(), "Returning dataset", sep=": "))
-  s <- toJSON(list(result = df3, plot = plotStr))
+  s <- toJSON(list(result = df3, plot = plotStr), na = "string", null = "list")
   return(s)
   }

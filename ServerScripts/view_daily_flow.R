@@ -2,13 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "DailyComponentFlow",
-  version = "v0.0.3",
+  version = "v0.0.4",
   description =  "SFC workflow for past 24 hrs",
   inputs = list(),
   outputs = list(result = "character")
 )
 
 #' Analyses and summarises daily component flow through shop floor.
+#' @version v0.0.4
 #'
 #' @return
 #' @export
@@ -137,7 +138,7 @@ serviceCode <- function(){
   
   ##### Returning dataset ##### 
   printLog("Returning dataset")
-  s <- toJSON(list(result = data.frame(), plot = plotStr))
+  s <- toJSON(list(result = data.frame(), plot = plotStr), na = "string", null = "list")
   return(s)
 }
 

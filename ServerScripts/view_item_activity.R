@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "ItemActivity",
-  version = "v0.0.2",
+  version = "v0.0.3",
   description = paste("Item processing times for past 24 hours. Can be filtered by operation and item.",
                       " Regexp is allowed (ie. operation = THT* or operation = (SMA|THT) to pick up",
                       "both SMA and THT operations)", sep = ""),
@@ -11,7 +11,7 @@ metadata <- list(
 )
 
 #' Title
-#' @version v0.0.2
+#' @version v0.0.3
 #' 
 #' @param operation 
 #'
@@ -112,8 +112,8 @@ serviceCode <- function(operation="", item = ""){
       c <- paste(c, ", ", sep = "")
     
     c <- paste(c, "{y: [", paste(df$duration[df$ITEM == i], collapse = ","),"]",
-               ",x: [", paste(paste("'", df$OPERATION[df$ITEM == i], "'", sep = ""), collapse = ","),"]",
-               ", type: 'box', name: '", i,"', boxpoints: 'suspectedoutliers', jitter: 0.1, marker: {size: 2, opacity: 0.75}}", sep = "")
+                  ",x: [", paste(paste("'", df$OPERATION[df$ITEM == i], "'", sep = ""), collapse = ","),"]",
+               ", type: 'box', hoverlabel:{bgcolor: 'rgba(0, 0, 0, 0)'}, name: 'Item ", i,"', boxpoints: 'suspectedoutliers', jitter: 0.1, marker: {size: 2, opacity: 0.75}}", sep = "")
   }
   c <- paste(c, "]", sep  ="")
 
@@ -123,7 +123,7 @@ serviceCode <- function(operation="", item = ""){
                             title: 'Activity duration [min]'
                           },
                           xaxis: {
-                            title: 'Item'
+                            title: 'Items by operation'
                           },
                           boxmode: 'group',
                           title: 'Activity durations for items by operation (operation=", 
@@ -144,6 +144,6 @@ serviceCode <- function(operation="", item = ""){
   names(df2) <- c("Item", "Operation", "StandardDeviation")
   df <- merge(df1, df2, by = c("Item", "Operation"))
   
-  s <- toJSON(list(result = df, plot = plotStr))
+  s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
   return(s)
 }

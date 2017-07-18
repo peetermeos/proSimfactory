@@ -11,6 +11,7 @@ metadata <- list(
 
 
 #' Creates summary of failed SFCs in past 24 hrs. SFCs are represented by their last known code.
+#' @version v0.2.1
 #'
 #' @return Dataframe of failed items and a plotly plot of failed items.
 #' @export
@@ -257,7 +258,7 @@ serviceCode <- function(){
 
   ##### Returning dataset ##### 
   printLog("Returning dataset")
-  s <- toJSON(list(result = df.ret, plot = plotStr))
+  s <- toJSON(list(result = df.ret, plot = plotStr), na = "string", null = "list")
   #return(plotStr)
   return(s)
 }
