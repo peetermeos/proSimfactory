@@ -3,12 +3,12 @@ source("ServerScripts/utils.R")
 metadata <- list(
   title = "DailyComponentFlow",
   version = "v0.0.3",
-  description <- "SFC workflow for past 24 hrs",
+  description =  "SFC workflow for past 24 hrs",
   inputs = list(),
   outputs = list(result = "character")
 )
 
-#' Title
+#' Analyses and summarises daily component flow through shop floor.
 #'
 #' @return
 #' @export

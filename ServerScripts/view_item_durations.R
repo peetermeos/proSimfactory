@@ -1,11 +1,11 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title = "itemActivity",
+  title = "ItemActivity",
   version = "v0.0.2",
   description = paste("Item processing times for past 24 hours. Can be filtered by operation and item.",
                       " Regexp is allowed (ie. operation = THT* or operation = (SMA|THT) to pick up",
-                      "both SMA and THT operations)", sep=""),
+                      "both SMA and THT operations)", sep = ""),
   inputs = list(operation = "character", item = "character"),
   outputs = list(result = "character")
 )

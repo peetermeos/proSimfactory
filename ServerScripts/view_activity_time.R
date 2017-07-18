@@ -1,20 +1,21 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title = "dailyActivity",
-  version = "v0.0.2",
+  title = "DailyActivity",
+  version = "v0.0.3",
   description = "Shop floor activity for past 24 hours",
   inputs = list(operation = "character"),
   outputs = list(result = "character")
 )
 
-#' Title
+#' Summarises daily activity on the shop floor.
 #' @version v0.0.1
 #' 
 #' @param operation 
 #'
-#' @return
-#' @export
+#' @return list of data frame summarising the activity (by median and sd) 
+#' and plotly plot.
+#' @export 
 #' @author Peeter Meos, Proekspert AS
 #' 
 #'
@@ -35,11 +36,11 @@ serviceCode <- function(operation = ""){
   #load("c:/Temp/2017-01-18.RData")
   #df <- df.ods
   
-  t2 <- as.POSIXct(Sys.time())
-  t1 <- t2 - 3600 * 24
+  t2 <- as.POSIXct(Sys.Date()) 
+  t1 <- t2 - 3600 * 24 
   
-  t1 <- format(t1, "%Y-%m-%d %H:%M:%S")
-  t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
+  t1 <- format(t1, "%Y-%m-%d")
+  t2 <- format(t2, "%Y-%m-%d")
   
   sql <- list()
   sql$db.name <- "SAPMEWIP"
