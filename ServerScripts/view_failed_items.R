@@ -3,14 +3,14 @@ source("ServerScripts/utils.R")
 metadata <- list(
   title = "FindFailsRepairs",
   version = "v0.2.0",
-  description = paste("Fails in past 24 hours in hourly heatmap and summary table.",
+  description = paste("Fails in past 24 hours in hourly barchart and summary table.",
                      " Split SFCs are represented as their last known code.", sep = ""),
   inputs = list(),
   outputs = list(result = "character")
 )
 
 
-#' Creates summary of failed SFCs in past 24 hrs. SFCs are represented as their last known code.
+#' Creates summary of failed SFCs in past 24 hrs. SFCs are represented by their last known code.
 #'
 #' @return Dataframe of failed items and a plotly plot of failed items.
 #' @export
@@ -29,7 +29,7 @@ serviceCode <- function(){
   tagFailsRepairs <- function(df){
     # Tag fails and repairs
     df$failure <- ifelse(
-      # If theres LOG_FAILURE that has not been closed
+      # If there's LOG_FAILURE that has not been closed
       (is.na(df$CLOSE_FAILURE) & !is.na(df$LOG_FAILURE)) |
         # If there is a fail
         !is.na(df$FAIL),  TRUE, FALSE)
@@ -43,7 +43,7 @@ serviceCode <- function(){
   printLog("Init")
   printLog("Event log loading started, getting last 24 hrs of events")
   
-  #load("tmp.RData")
+  # load("tmp.RData")
   
   t2 <- as.POSIXct(Sys.time())
   t1 <- t2 - 3600 * 24
@@ -226,18 +226,22 @@ serviceCode <- function(){
     if (sum(y) > 0) {
       ifelse(!first.row, plotStr <- paste(plotStr, ", ", sep = ""), first.row <- FALSE)
       
-      plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines',", sep = "")
+      #plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines+markers', line: {shape: 'spline'},", sep = "")
+      plotStr <- paste(plotStr, "{type: 'bar',", sep = "")
       plotStr <- paste(plotStr, "name: '", i, "',", sep = "")
       # Assemble x and y
-      plotStr <- paste(plotStr, "x: ['", paste(lh, collapse = "','"),"'],", sep = "")
-      plotStr <- paste(plotStr, "y: [", paste(y, collapse = ","),"]", sep = "")
+      plotStr <- paste(plotStr, "x: ['", paste(lh[y > 0], collapse = "','"),"'],", sep = "")
+      plotStr <- paste(plotStr, "y: [", paste(y[y > 0], collapse = ","),"]", sep = "")
 
       plotStr <- paste(plotStr, "}", sep = "")
     }
   }
   
-  plotStr <- paste(plotStr, "myChart = document.getElementById('myChart');
-                             Plotly.newPlot(myChart, data, layout);", sep = ""); 
+  plotStr <- paste(plotStr, "];",
+                             #"var layout = {title: 'SFC failures over past 24hrs'};",
+                             "var layout = {title: 'SFC failures over past 24hrs', barmode: 'stack'};",
+                             "myChart = document.getElementById('myChart');
+                              Plotly.newPlot(myChart, data, layout);", sep = ""); 
 
   ##### Returning dataset ##### 
   printLog("Returning dataset")
