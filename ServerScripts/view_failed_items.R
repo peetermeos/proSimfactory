@@ -2,7 +2,7 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "FindFailsRepairs",
-  version = "v0.2.0",
+  version = "v0.2.1",
   description = paste("Fails in past 24 hours in hourly barchart and summary table.",
                      " Split SFCs are represented as their last known code.", sep = ""),
   inputs = list(),
@@ -73,6 +73,15 @@ serviceCode <- function(){
                             ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
                             FROM dbo.ACTIVITY_LOG
                             WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
+  
+  df.status <- sqlQuery(db, paste("SELECT a.SFC, a.SHOP_ORDER_BO, a.QTY, a.QTY_DONE, a.QTY_SCRAPPED, 
+                                   a.ACTUAL_COMP_DATE, a.MODIFIED_DATE_TIME, b.STATUS_DESCRIPTION,  
+                           ITEM.ITEM 
+                           FROM SFC AS a 
+                           INNER JOIN STATUS AS b ON a.STATUS_BO = b.HANDLE 
+                           INNER JOIN ITEM ON a.ITEM_BO = ITEM.HANDLE 
+                           WHERE a.MODIFIED_DATE_TIME >='", t1, " ' 
+                           AND a.MODIFIED_DATE_TIME   <= '", t2, "'", sep = ""))
   odbcClose(db)
 
   if (nrow(df) > 2)
@@ -182,10 +191,13 @@ serviceCode <- function(){
 
   # Add fail times and fail locations
   df <- merge(df, df.fail, by = "SFC")
-  
+
+  # Add last known status
+  df <- merge(df, df.status[,c("SFC", "STATUS_DESCRIPTION")], by = "SFC")
+    
   # For returning the dataset just keep the necessary columns
-  df.ret <- df[, c("SFC", "failed.at", "failed.time", "RESRCE", "event_end")] 
-  names(df.ret)[4:5] <- c("last.event.at", "last.event.time")
+  df.ret <- df[, c("SFC", "failed.at", "failed.time", "RESRCE", "event_end", "STATUS_DESCRIPTION")] 
+  names(df.ret)[4:6] <- c("last.event.at", "last.event.time", "reported.status")
   df.ret$failed.time <- as.POSIXct(df.ret$failed.time)
   df.ret$last.event.time <- as.POSIXct(df.ret$last.event.time)
   df.ret <- df.ret[order(df.ret$failed.time), ]
