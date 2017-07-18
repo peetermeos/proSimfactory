@@ -250,8 +250,8 @@ serviceCode <- function(){
   }
   
   plotStr <- paste(plotStr, "];",
-                             #"var layout = {title: 'SFC failures over past 24hrs'};",
-                             "var layout = {title: 'SFC failures over past 24hrs', barmode: 'stack'};",
+                             #"var layout = {title: 'SFC failures over past 24hrs as of  ", t2,"'};",
+                             "var layout = {title: 'SFC failures over past 24hrs as of  ", t2,"', barmode: 'stack'};",
                              "myChart = document.getElementById('myChart');
                               Plotly.newPlot(myChart, data, layout);", sep = ""); 
 
