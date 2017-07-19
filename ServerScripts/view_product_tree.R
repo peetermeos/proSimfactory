@@ -2,14 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title <- "CreateProductTree",
-  version = "v0.1.2",
-  description <- "Creates SFC hierarchy",
+  version = "v0.2.0",
+  description <- "Creates SFC hierarchy based on BOMs",
   inputs = list(),
   outputs = list(result = "character")
 )
 
-#' Creates summary of failed SFCs in past 24 hrs
-#' @version v0.1.2
+#' Creates SFC hierarchy based on BOMs
+#' @version v0.2.0
 #'
 #' @return
 #' @export
