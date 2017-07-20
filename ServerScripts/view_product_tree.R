@@ -2,133 +2,124 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title <- "CreateProductTree",
-  version = "v0.2.0",
-  description <- "Creates SFC hierarchy based on BOMs",
-  inputs = list(),
+  version = "v0.3.0",
+  description <- "Creates item hierarchy based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
+  inputs = list(item = "character", revision="character"),
   outputs = list(result = "character")
 )
 
-#' Creates SFC hierarchy based on BOMs
-#' @version v0.2.0
+#' Creates item hierarchy based on BOMs
+#' @version v0.3.0
 #'
 #' @return
 #' @export
 #' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
-serviceCode <- function(){
+serviceCode <- function(item = "", revision = ""){
   library("RODBC")
   library("reshape2")
   library("dplyr")
   library("jsonlite")
   library("Matrix")
   
+  # Nice logging functionality
   printLog <- function(s){print(paste(Sys.time(), s, sep = ": "))}
-  
-  findParents <- function(child){
-    r <- ""
-    p <- df.m$parent[df.m$child == child]
-    if(length(p) > 0){
-      for (i in p){
-        r <- paste(r, i, sep = ":")
-        r <- paste(r, findParents(i), sep = ":")
+
+  # Find child components
+  getComponents <- function(parent, revision, db){
+    printLog(paste("Getting component information for item :", parent, sep = ""))
+
+    bom <- paste("BOMBO:EEEL1,", parent, ",U,0/", revision, sep = "")
+    df.ret <- data.frame(item = parent, rev = revision)
+
+    df <- sqlQuery(db, paste("SELECT
+      ,[BOM_BO]
+      ,[COMPONENT_GBO]
+      ,[VALID_START]
+      ,[VALID_END]
+      ,[QTY]
+      ,[CREATED_DATE_TIME]
+      ,[MODIFIED_DATE_TIME]
+      ,[BOM_COMPONENT_TYPE]
+      ,[ORDER_ITEM_NUMBER]
+       FROM [SAPMEWIP].[dbo].[BOM_COMPONENT]
+       WHERE BOM_BO LIKE '", bom, "';", sep=""))
+
+    # Now loop through the data frame, pick up child components
+    for (i in 1:nrow(df)){
+      s <- strsplit(df$COMPONENT_BO[i], ",")
+      new.item <- s[[2]]
+      new.rev <- strplit(s[[4]], "/")[[2]]
+      if(nchar(new.item < 6)){
+        df.ret <- rbind(df.ret, getComponents(new.item, new.rev, db))
       }
     }
-    return(r)
+    return(df.ret)
   }
   
   printLog("Init")
-  
-##### Database import #####
-  
-  printLog("Loading started, getting last 24 hrs")
-  
-  load("Data/SFCHist/2017-01-18.RData")
-  df.link <- df.ods
-  
-  load("Data/ODS/2017-01-18.RData")
+    
+  # Stop if item name was not provided
+  if (item == ""){
+    stop("Item name must be provided.")
+  }
 
-  # t2 <- as.POSIXct(Sys.Date())
-  # t1 <- t2 - 3600 * 24
-  # 
-  # t1 <- format(t1, "%Y-%m-%d")
-  # t2 <- format(t2, "%Y-%m-%d")
-  # 
-  # sql <- list()
-  # sql$db.name <- "SAPMEWIP"
-  # sql$host.name <- "eeel163.encnet.ead.ems"
-  # sql$driver.name <- "SQL Server"
-  # sql$port <- ""
-  # sql$user.name <- "proekspert"
-  # sql$pwd <- "proekspert1!"
-  # 
-  # s.odbc <- paste("DRIVER=", sql$driver.name,
-  #                 ";Database=", sql$db.name,
-  #                 ";Server=", sql$host.name,
-  #                 ";Port=", sql$port,
-  #                 ";PROTOCOL=TCPIP",
-  #                 ";UID=", sql$user.name,
-  #                 ";PWD=", sql$pwd,
-  #                 ";TDS_Version=8.0", sep = "")
-  # db <- odbcDriverConnect(s.odbc)
-  # 
-  # df <- sqlQuery(db, paste("SELECT SFC, ACTION_CODE, DATE_TIME, SFC, OPERATION, ITEM, ITEM_REVISION,
-  #                          ROUTER, ROUTER_REVISION, STEP_ID, RESRCE, SHOP_ORDER_BO, PARTITION_DATE
-  #                          FROM dbo.ACTIVITY_LOG
-  #                          WHERE DATE_TIME >='", t1, "' AND DATE_TIME   <= '", t2, "'", sep = ""))
-  # 
-  # odbcClose(db)
-  # if (nrow(df) > 2)
-  #   printLog("Loading successful")
-  # else{
-  #   printLog("Loading failed")
-  #   stop()
-  # }
+  ##### Go through BOM components to find all sub-items #####
+  sql <- list()
+  sql$db.name <- "SAPMEWIP"
+  sql$host.name <- "eeel163.encnet.ead.ems"
+  sql$driver.name <- "SQL Server"
+  sql$port <- ""
+  sql$user.name <- "proekspert"
+  sql$pwd <- "proekspert1!"
+  
+  s.odbc <- paste("DRIVER=", sql$driver.name,
+                  ";Database=", sql$db.name,
+                  ";Server=", sql$host.name,
+                  ";Port=", sql$port,
+                  ";PROTOCOL=TCPIP",
+                  ";UID=", sql$user.name,
+                  ";PWD=", sql$pwd,
+                  ";TDS_Version=8.0", sep = "")
+  
+  db <- odbcDriverConnect(s.odbc)
+  
+  printLog("Getting component data")
+  components <- getComponents(parent = item, revision = revision, db = db)
+  
+  ##### Get status for all items #####
+  
+  # Construct the list of items
+  s <- ""
+  for (i in 1:nrow(components)) {
+    s <- paste(s, " LIKE ", components$item[i], sep = "")
+    if (i != components$item[nrow(components)]) {
+      s <- paste(s, "OR", sep = "")
+    }
+  }
 
-##### Analysis #####
+  # Do the query
+  df <- sqlQuery(db, paste("SELECT a.SFC, a.SHOP_ORDER_BO, a.QTY, a.QTY_DONE, a.QTY_SCRAPPED, 
+                                   a.ACTUAL_COMP_DATE, a.MODIFIED_DATE_TIME, b.STATUS_DESCRIPTION,  
+                           ITEM.ITEM 
+                           FROM SFC AS a 
+                           INNER JOIN STATUS AS b ON a.STATUS_BO = b.HANDLE 
+                           INNER JOIN ITEM ON a.ITEM_BO = ITEM.HANDLE 
+                           WHERE ITEM LIKE '", s, "'", sep = "")) 
   
-  df.link$child <- gsub("^.*,","", as.character(df.link$SFC_BO))
-  df.link$child <- factor(df.link$child)
+  odbcClose(db)
+  printLog("Done with the database")
   
-  # Take out lines where SFC has mutated into itself
-  df.link <- df.link[as.character(df.link$child) != as.character(df.link$SFC), ]
+  ##### Calculate medians and standard devs for all activities. #####
+  # We are not going to do that yet
   
-  # Rename SFC to parent
-  names(df.link)[names(df.link) %in% "SFC"] <- "parent"
+  ##### Create plot #####
+  plotStr <- ""
   
-  # We use only parent child and datetime
-  df.link <- df.link[, c("DATE_TIME","parent", "child")]
+  ##### Compose return data frame #####
+  df.ret <- df
   
-  # Create SFC shop order summary table
-  df.sfc.shop.order.link <- unique(df.ods[, c("SFC", "SHOP_ORDER")])
-  
-  # Merge shop orders to the link table
-  df.link <- merge(df.link, df.sfc.shop.order.link, by.x="parent", by.y = "SFC", all.y = FALSE)
-  names(df.link)[names(df.link) %in% "SHOP_ORDER"] <- "so.parent"
-
-  df.link <- merge(df.link, df.sfc.shop.order.link, by.x="child", by.y = "SFC", all.y = FALSE)
-  names(df.link)[names(df.link) %in% "SHOP_ORDER"] <- "so.child"
-  
-  # Lets try aggregation into sparse matrix
-  df.link$count <- 1
-  df.m <- aggregate(data = df.link, count ~ parent + child, FUN = "sum")
-  
-  df.m$ancestry <- sapply(df.m$child, findParents)
-  #df.m <- sparseMatrix(i = as.numeric(df.m$parent), j = as.numeric(df.m$child), x = df.m$count)
-##### Plot creation  ######
-  
-  printLog("Creating the plot")
-  c <- "[]"
-  
-  plotStr <- paste("var data = ", c, ";",
-                   "var layout = {
-                        title: 'Product tree',
-                        };
-                   myChart = document.getElementById('myChart');
-                   Plotly.newPlot(myChart, data, layout);", sep = "");    
-
-##### Results #####    
-  #printLog("Returning dataset")
-  #s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
-  return(df.link)
+  s <- toJSON(list(result = df.ret, plot = plotStr), na = "string", null = "list")
+  return(df)
 }
