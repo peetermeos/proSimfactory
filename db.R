@@ -190,6 +190,78 @@ getAllEventLog <- function(){
   }
 }
 
+getBOM <- function(){
+  df.bom <- sqlQuery(db, paste("SELECT [HANDLE]
+      ,[CHANGE_STAMP]
+      ,[SITE]
+      ,[BOM]
+      ,[BOM_TYPE]
+      ,[DESCRIPTION]
+      ,[STATUS_BO]
+      ,[TMP_BOM]
+      ,[COPIED_FROM_BOM_BO]
+      ,[REVISION]
+      ,[CURRENT_REVISION]
+      ,[BOM_TEMPLATE]
+      ,[HAS_BEEN_RELEASED]
+      ,[EFF_START_DATE]
+      ,[EFF_END_DATE]
+      ,[EFFECTIVITY_CONTROL]
+      ,[PREV_SITE]
+      ,[ORIGINAL_TRANSFER_KEY]
+      ,[CREATED_DATE_TIME]
+      ,[MODIFIED_DATE_TIME]
+      ,[PARTITION_DATE]
+      ,[ERP_BILL_OF_MATERIAL]
+  FROM [SAPMEWIP].[dbo].[BOM]", sep=""))
+    
+  save(df.bom, file = paste("Data/WIP/", "bom", ".RData", sep = ""))
+  
+}
+
+getBOMComponent <- function(){
+  for(i in c(2015, 2016, 2017)){
+    print(i)
+    
+    t1 <- as.POSIXct(paste(i, "-01-01", sep = ""))
+    t2 <- as.POSIXct(paste(i + 1, "-01-01", sep = "")) 
+    t1 <- format(t1, "%Y-%m-%d")
+    t2 <- format(t2, "%Y-%m-%d")
+  
+  df.bom.component <- sqlQuery(db, paste("SELECT [HANDLE]
+      ,[BOM_BO]
+      ,[COMPONENT_GBO]
+      ,[SEQUENCE]
+      ,[ENABLED]
+      ,[VALID_START]
+      ,[VALID_END]
+      ,[USE_ITEM_DEFAULTS]
+      ,[PRE_ASSEMBLED]
+      ,[ASSY_DATA_TYPE_BO]
+      ,[QTY]
+      ,[TEST_PART]
+      ,[BOM_TEMPLATE]
+      ,[DISASSEMBLE_OPERATION_BO]
+      ,[CREATE_TRACKABLE_SFC]
+      ,[MAXIMUM_USAGE]
+      ,[MAXIMUM_NC]
+      ,[ASSEMBLE_AS_REQ]
+      ,[AUTO_CONSUME_KIT]
+      ,[CREATED_DATE_TIME]
+      ,[MODIFIED_DATE_TIME]
+      ,[BOM_COMPONENT_TYPE]
+      ,[PARENT_SEQUENCE]
+      ,[ORDER_ITEM_NUMBER]
+      ,[ERP_CHANGE_NUMBER]
+      ,[ERP_SEQUENCE]
+       FROM [SAPMEWIP].[dbo].[BOM_COMPONENT]
+       WHERE CREATED_DATE_TIME  >= CONVERT(datetime, '", t1,"') AND CREATED_DATE_TIME  < CONVERT(datetime, '", t2, "')",
+      sep=""))
+  
+  save(df.bom.component, file = paste("Data/WIP/", "bomComponent", t1,  ".RData", sep = ""))
+  }
+}
+
 mergeAllProductionLog <- function(){
   require(dplyr)
   for (i in 1:185){

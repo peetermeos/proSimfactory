@@ -119,8 +119,7 @@ serviceCode <- function(operation = ""){
                             title: 'Operation'
                           },
                           boxmode: 'group',
-                          title: 'Activity durations by operation between ", t1, " and ", t2,
-                          "};
+                          title: 'Activity durations by operation between ", t1, " and ", t2, "'};
 
                    myChart = document.getElementById('myChart');
                    Plotly.newPlot(myChart, data, layout);",
