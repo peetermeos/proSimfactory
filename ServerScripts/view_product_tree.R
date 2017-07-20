@@ -1,10 +1,10 @@
 source("ServerScripts/utils.R")
 
 metadata <- list(
-  title <- "CreateProductTree",
+  title = "CreateProductTree",
   version = "v0.3.0",
-  description <- "Creates item hierarchy based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
-  inputs = list(item = "character", revision="character"),
+  description = "Creates item hierarchy based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
+  inputs = list(item = "character", revision = "character"),
   outputs = list(result = "character")
 )
 
@@ -27,14 +27,16 @@ serviceCode <- function(item = "", revision = ""){
   printLog <- function(s){print(paste(Sys.time(), s, sep = ": "))}
 
   # Find child components
+  revStr <- ""
   getComponents <- function(parent, revision, db){
-    printLog(paste("Getting component information for item :", parent, sep = ""))
-
-    bom <- paste("BOMBO:EEEL1,", parent, ",U,0/", revision, sep = "")
+    ifelse((revision == "" | revision == "*"), revStr <- "%", revStr <- revision) 
+    
+    bom <- paste("BOMBO:EEEL1,", parent, ",U,0/", revStr, sep = "")
+    printLog(paste("Getting component information for item: ", bom, sep = ""))
+    
     df.ret <- data.frame(item = parent, rev = revision)
-
     df <- sqlQuery(db, paste("SELECT
-      ,[BOM_BO]
+       [BOM_BO]
       ,[COMPONENT_GBO]
       ,[VALID_START]
       ,[VALID_END]
@@ -44,14 +46,18 @@ serviceCode <- function(item = "", revision = ""){
       ,[BOM_COMPONENT_TYPE]
       ,[ORDER_ITEM_NUMBER]
        FROM [SAPMEWIP].[dbo].[BOM_COMPONENT]
-       WHERE BOM_BO LIKE '", bom, "';", sep=""))
+       WHERE BOM_BO LIKE '", bom, "';", sep = ""))
 
     # Now loop through the data frame, pick up child components
-    for (i in 1:nrow(df)){
-      s <- strsplit(df$COMPONENT_BO[i], ",")
-      new.item <- s[[2]]
-      new.rev <- strplit(s[[4]], "/")[[2]]
-      if(nchar(new.item < 6)){
+    if (length(df) == 0 | nrow(df) == 0) {
+      return(df.ret)
+    }
+    df$COMPONENT_GBO <- as.character(df$COMPONENT_GBO)
+    for (i in 1:nrow(df)) {
+      s <- strsplit(df$COMPONENT_GBO[i], ",")
+      new.item <- s[[1]][2]
+      new.rev <- strsplit(s[[1]][3], "/")[[1]][2]
+      if (nchar(new.item) < 6) {
         df.ret <- rbind(df.ret, getComponents(new.item, new.rev, db))
       }
     }
@@ -61,7 +67,7 @@ serviceCode <- function(item = "", revision = ""){
   printLog("Init")
     
   # Stop if item name was not provided
-  if (item == ""){
+  if (item == "") {
     stop("Item name must be provided.")
   }
 
@@ -87,39 +93,87 @@ serviceCode <- function(item = "", revision = ""){
   
   printLog("Getting component data")
   components <- getComponents(parent = item, revision = revision, db = db)
-  
   ##### Get status for all items #####
   
   # Construct the list of items
+  printLog("Getting status info for the components")
   s <- ""
   for (i in 1:nrow(components)) {
-    s <- paste(s, " LIKE ", components$item[i], sep = "")
-    if (i != components$item[nrow(components)]) {
-      s <- paste(s, "OR", sep = "")
+    s <- paste(s, " (ITEM.ITEM = ", paste("'", components$item[i], "' AND ITEM.REVISION = '0/", components$rev[i],"')", sep = ""), sep = "")
+    #s <- paste(s, "(ITEM.ITEM = ", paste("'", components$item[i], "')", sep = ""), sep = "")
+    if (i != nrow(components)) {
+      s <- paste(s, " OR", sep = "")
     }
   }
-
+  #print(s)
+   
   # Do the query
-  df <- sqlQuery(db, paste("SELECT a.SFC, a.SHOP_ORDER_BO, a.QTY, a.QTY_DONE, a.QTY_SCRAPPED, 
+  sqlStr <- paste("SELECT a.SFC, a.SHOP_ORDER_BO, a.QTY, a.QTY_DONE, a.QTY_SCRAPPED, 
                                    a.ACTUAL_COMP_DATE, a.MODIFIED_DATE_TIME, b.STATUS_DESCRIPTION,  
-                           ITEM.ITEM 
+                           ITEM.ITEM, ITEM.REVISION 
                            FROM SFC AS a 
                            INNER JOIN STATUS AS b ON a.STATUS_BO = b.HANDLE 
                            INNER JOIN ITEM ON a.ITEM_BO = ITEM.HANDLE 
-                           WHERE ITEM LIKE '", s, "'", sep = "")) 
+                           WHERE", s, sep = "")
   
+  df <- sqlQuery(db, sqlStr)
   odbcClose(db)
   printLog("Done with the database")
-  
+  odbcCloseAll()
+
   ##### Calculate medians and standard devs for all activities. #####
   # We are not going to do that yet
   
-  ##### Create plot #####
-  plotStr <- ""
+  ##### Prepare for plot #####
+  # Summarise for plotting 
+  df$ITEM <- factor(df$ITEM)
+  df <- aggregate(data = df, QTY ~ ITEM  + REVISION + STATUS_DESCRIPTION, FUN = "sum", na.rm = TRUE)
+  
+  df$ITEM.REV <- paste(df$ITEM, df$REVISION, sep = "/")
+  # Order levels alphabetically
+  df$ITEM <- factor(df$ITEM, levels = levels(df$ITEM)[order(levels(df$ITEM))])
+  df$STATUS_DESCRIPTION <- factor(df$STATUS_DESCRIPTION, 
+                                  levels = levels(df$STATUS_DESCRIPTION)[order(levels(df$STATUS_DESCRIPTION))])
+  
+  li <- levels(df$ITEM.REV)
+  ls <- levels(df$STATUS_DESCRIPTION)
+  
+  ##### Creating a plot ######
+  printLog("Creating the plot")
+  plotStr <- "var data = [";
+  
+  first.row <- TRUE  
+  for (i in li) {
+    y <- rep(0, length(li))
+    for (j in ls) {
+      # Y vector
+      y[which(ls == j)] <- ifelse(length(df$QTY[df$ITEM.REV == i & df$STATUS_DESCRIPTION == j]) > 0, 
+                                  df$QTY[df$ITEM.REV == i & df$STATUS_DESCRIPTION == j], 0)
+    }
+    
+    if (sum(y) > 0) {
+      ifelse(!first.row, plotStr <- paste(plotStr, ", ", sep = ""), first.row <- FALSE)
+      
+      #plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines+markers', line: {shape: 'spline'},", sep = "")
+      plotStr <- paste(plotStr, "{type: 'bar',", sep = "")
+      plotStr <- paste(plotStr, "name: '", i, "',", sep = "")
+      # Assemble x and y
+      plotStr <- paste(plotStr, "x: ['", paste(ls[y > 0], collapse = "','"),"'],", sep = "")
+      plotStr <- paste(plotStr, "y: [", paste(y[y > 0], collapse = ","),"]", sep = "")
+      
+      plotStr <- paste(plotStr, "}", sep = "")
+    }
+  }
+  
+  plotStr <- paste(plotStr, "];",
+                   #"var layout = {title: 'Item statuses over past 24hrs as of ", t2,"'};",
+                   "var layout = {title: 'Item statuses for item  ", item ," rev", revision, "hierarcy', barmode: 'stack'};",
+                   "myChart = document.getElementById('myChart');
+                              Plotly.newPlot(myChart, data, layout);", sep = "");   
   
   ##### Compose return data frame #####
-  df.ret <- df
+  df.ret <- dcast(data = df, ITEM + REVISION ~ STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
   
   s <- toJSON(list(result = df.ret, plot = plotStr), na = "string", null = "list")
-  return(df)
+  return(s)
 }
