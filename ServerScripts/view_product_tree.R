@@ -2,14 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "CreateProductTree",
-  version = "v0.3.1",
+  version = "v0.3.2",
   description = "Creates hierarchy of item statuses based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
   inputs = list(item = "character", revision = "character"),
   outputs = list(result = "character")
 )
 
 #' Creates item hierarchy based on BOMs
-#' @version v0.3.1
+#' @version v0.3.2
 #'
 #' @return
 #' @export
@@ -171,7 +171,7 @@ serviceCode <- function(item = "", revision = ""){
   
   plotStr <- paste(plotStr, "];",
                    #"var layout = {title: 'Item statuses over past 24hrs as of ", t2,"'};",
-                   "var layout = {title: 'Item statuses for item  ", item ," rev", revision, " hierarcy', barmode: 'stack'};",
+                   "var layout = {title: 'Item statuses for item  ", item ," rev", revision, " hierarchy', barmode: 'stack'};",
                    "myChart = document.getElementById('myChart');
                               Plotly.newPlot(myChart, data, layout);", sep = "");   
   #write.table(plotStr, file="text.txt")
