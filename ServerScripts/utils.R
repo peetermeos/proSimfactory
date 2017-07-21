@@ -139,6 +139,25 @@ listServices <- function(){
   return(data.frame(name, version))
 }
 
+#' Deploys all views to the active server
+#'
+#' @return
+#' @export
+#' @author Peeter Meos, Proekspert AS
+#'
+#' @examples
+deployAllViews <- function(path = "./ServerScripts/") {
+  print(paste("Deploying all views from ", path, sep = ""))
+  
+  views <- dir(path, pattern ="view_*.R")
+  
+  for (v in views) {
+    print(v)
+    source(v)
+    deploy(metadata, serviceCode)
+  }
+}
+
 # Legacy stuff from testing
 notRun <- function(){
   print(api$capabilities())
