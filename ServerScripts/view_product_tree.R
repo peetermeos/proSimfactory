@@ -2,14 +2,14 @@ source("ServerScripts/utils.R")
 
 metadata <- list(
   title = "CreateProductTree",
-  version = "v0.3.0",
+  version = "v0.3.1",
   description = "Creates hierarchy of item statuses based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
   inputs = list(item = "character", revision = "character"),
   outputs = list(result = "character")
 )
 
 #' Creates item hierarchy based on BOMs
-#' @version v0.3.0
+#' @version v0.3.1
 #'
 #' @return
 #' @export
@@ -19,22 +19,20 @@ metadata <- list(
 serviceCode <- function(item = "", revision = ""){
   library("RODBC")
   library("reshape2")
-  library("dplyr")
   library("jsonlite")
-  library("Matrix")
-  
+
   # Nice logging functionality
   printLog <- function(s){print(paste(Sys.time(), s, sep = ": "))}
 
   # Find child components
   revStr <- ""
-  getComponents <- function(parent, revision, db){
+  getComponents <- function(parent, revision, inherits = "", db){
     ifelse((revision == "" | revision == "*"), revStr <- "%", revStr <- revision) 
     
     bom <- paste("BOMBO:EEEL1,", parent, ",U,0/", revStr, sep = "")
     printLog(paste("Getting component information for item: ", bom, sep = ""))
     
-    df.ret <- data.frame(item = parent, rev = revision)
+    df.ret <- data.frame(item = parent, rev = revision, required.by = inherits)
     df <- sqlQuery(db, paste("SELECT
        [BOM_BO]
       ,[COMPONENT_GBO]
@@ -57,8 +55,9 @@ serviceCode <- function(item = "", revision = ""){
       s <- strsplit(df$COMPONENT_GBO[i], ",")
       new.item <- s[[1]][2]
       new.rev <- strsplit(s[[1]][3], "/")[[1]][2]
+      if (is.na(new.rev)) new.rev <- "*"
       if (nchar(new.item) < 6) {
-        df.ret <- rbind(df.ret, getComponents(new.item, new.rev, db))
+        df.ret <- rbind(df.ret, getComponents(new.item, new.rev, paste(parent, " rev ", revision, sep = ""), db))
       }
     }
     return(df.ret)
@@ -100,7 +99,7 @@ serviceCode <- function(item = "", revision = ""){
   s <- ""
   for (i in 1:nrow(components)) {
     s <- paste(s, " (ITEM.ITEM = '", components$item[i], "'", sep = "") 
-    if (!is.na(components$rev[i])) s <- paste(s,  " AND ITEM.REVISION = '0/", components$rev[i], "'", sep = "") 
+    if (!is.na(components$rev[i]) & components$rev[i] != "*") s <- paste(s,  " AND ITEM.REVISION = '0/", components$rev[i], "'", sep = "") 
     s <- paste(s, ")", sep = "")
     
     #s <- paste(s, "(ITEM.ITEM = ", paste("'", components$item[i], "')", sep = ""), sep = "")
@@ -178,7 +177,9 @@ serviceCode <- function(item = "", revision = ""){
   #write.table(plotStr, file="text.txt")
   ##### Compose return data frame #####
   df.ret <- dcast(data = df, ITEM + REVISION ~ STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
-  
-  s <- toJSON(list(result = df.ret, plot = plotStr), na = "string", null = "list")
+  names(components) <- c("ITEM", "REVISION", "REQUIRED BY")
+  df1 <- data.frame(ITEM = components[, 1])
+  df.ret <- merge(df.ret, df1, by = "ITEM", all.y = TRUE)
+  s <- toJSON(list(ComponentHierarchy = components, ComponentStatus = df.ret, plot = plotStr), na = "string", null = "list")
   return(s)
 }
