@@ -3,7 +3,7 @@ source("ServerScripts/utils.R")
 metadata <- list(
   title = "CreateProductTree",
   version = "v0.3.0",
-  description = "Creates item hierarchy based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
+  description = "Creates hierarchy of item statuses based on BOMs. Item cannot be empty. Regexp in item name is allowed. Empty revision takes all revisions.",
   inputs = list(item = "character", revision = "character"),
   outputs = list(result = "character")
 )
@@ -99,7 +99,10 @@ serviceCode <- function(item = "", revision = ""){
   printLog("Getting status info for the components")
   s <- ""
   for (i in 1:nrow(components)) {
-    s <- paste(s, " (ITEM.ITEM = ", paste("'", components$item[i], "' AND ITEM.REVISION = '0/", components$rev[i],"')", sep = ""), sep = "")
+    s <- paste(s, " (ITEM.ITEM = '", components$item[i], "'", sep = "") 
+    if (!is.na(components$rev[i])) s <- paste(s,  " AND ITEM.REVISION = '0/", components$rev[i], "'", sep = "") 
+    s <- paste(s, ")", sep = "")
+    
     #s <- paste(s, "(ITEM.ITEM = ", paste("'", components$item[i], "')", sep = ""), sep = "")
     if (i != nrow(components)) {
       s <- paste(s, " OR", sep = "")
@@ -119,6 +122,7 @@ serviceCode <- function(item = "", revision = ""){
   df <- sqlQuery(db, sqlStr)
   odbcClose(db)
   printLog("Done with the database")
+  #return(df)
   odbcCloseAll()
 
   ##### Calculate medians and standard devs for all activities. #####
@@ -129,9 +133,10 @@ serviceCode <- function(item = "", revision = ""){
   df$ITEM <- factor(df$ITEM)
   df <- aggregate(data = df, QTY ~ ITEM  + REVISION + STATUS_DESCRIPTION, FUN = "sum", na.rm = TRUE)
   
-  df$ITEM.REV <- paste(df$ITEM, df$REVISION, sep = "/")
+  df$ITEM.REV <- paste(df$ITEM, df$REVISION, sep = "rev")
   # Order levels alphabetically
-  df$ITEM <- factor(df$ITEM, levels = levels(df$ITEM)[order(levels(df$ITEM))])
+  #df$ITEM.REV <- factor(df$ITEM.REV, levels = levels(df$ITEM.REV)[order(levels(df$ITEM.REV))])
+  df$ITEM.REV <- factor(df$ITEM.REV)
   df$STATUS_DESCRIPTION <- factor(df$STATUS_DESCRIPTION, 
                                   levels = levels(df$STATUS_DESCRIPTION)[order(levels(df$STATUS_DESCRIPTION))])
   
@@ -167,10 +172,10 @@ serviceCode <- function(item = "", revision = ""){
   
   plotStr <- paste(plotStr, "];",
                    #"var layout = {title: 'Item statuses over past 24hrs as of ", t2,"'};",
-                   "var layout = {title: 'Item statuses for item  ", item ," rev", revision, "hierarcy', barmode: 'stack'};",
+                   "var layout = {title: 'Item statuses for item  ", item ," rev", revision, " hierarcy', barmode: 'stack'};",
                    "myChart = document.getElementById('myChart');
                               Plotly.newPlot(myChart, data, layout);", sep = "");   
-  
+  #write.table(plotStr, file="text.txt")
   ##### Compose return data frame #####
   df.ret <- dcast(data = df, ITEM + REVISION ~ STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
   
