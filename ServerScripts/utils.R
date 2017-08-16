@@ -25,7 +25,8 @@ srv.test$url <- "http://mef3000p.prx:12800"
 
 # Live at Elva
 srv.live <- srv
-srv.live$url <- "http://gleu130.encnet.ead.ems:12800"
+#srv.live$url <- "http://gleu130.encnet.ead.ems:12800"
+srv.live$url <- "http://eeel157.encnet.ead.ems:12800"
 
 
 #' Login to remote R server
