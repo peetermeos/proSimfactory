@@ -16,7 +16,7 @@ metadata <- list(
 #' @author Peeter Meos, Proekspert AS
 #'
 #' @examples
-serviceCode <- function(item = ""){
+serviceCode <- function(){
   library("RODBC")
   library("reshape2")
   library("dplyr")
@@ -37,8 +37,8 @@ serviceCode <- function(item = ""){
   t2 <- format(t2, "%Y-%m-%d %H:%M:%S")
   
   sql <- list()
-  sql$db.name <- "SAPMEWIP"
-  sql$host.name <- "eeel163.encnet.ead.ems"
+  sql$db.name <- "SAPMEODS"
+  sql$host.name <- "eeel164.encnet.ead.ems"
   sql$driver.name <- "SQL Server"
   sql$port <- ""
   sql$user.name <- "proekspert"
@@ -55,14 +55,14 @@ serviceCode <- function(item = ""){
   
   db <- odbcDriverConnect(s.odbc)
   
-  df <- sqlQuery(db, paste("SELECT a.SFC, a.SHOP_ORDER_BO, a.QTY, a.QTY_DONE, a.QTY_SCRAPPED, 
-                                   a.ACTUAL_COMP_DATE, a.MODIFIED_DATE_TIME, b.STATUS_DESCRIPTION,  
-                                   ITEM.ITEM 
-                            FROM SFC AS a 
-                            INNER JOIN STATUS AS b ON a.STATUS_BO = b.HANDLE 
-                            INNER JOIN ITEM ON a.ITEM_BO = ITEM.HANDLE 
-                            WHERE a.MODIFIED_DATE_TIME >='", t1, " ' 
-                              AND a.MODIFIED_DATE_TIME   <= '", t2, "'", sep = ""))
+  
+  # Get the production log for past 24 hrs
+  df <- sqlQuery(db, paste("SELECT a.SFC, a.OPERATION, a.RESRCE, a.TIMES_PROCESSED, a.PASS1_ELAPSED_TIME,
+                                  a.PASS1_ELAPSED_QUEUE_TIME, a.ODS_DATE_TIME,
+                                  a.SHOP_ORDER, a.ITEM, a.ITEM_REVISION
+                                  FROM dbo.ODS_PRODUCTION_LOG AS a
+                                  WHERE a.DATE_TIME >='", t1, "' AND a.DATE_TIME   <= '", t2, "'", sep = ""))
+
   
   odbcClose(db)
   if (nrow(df) > 2)
@@ -71,60 +71,95 @@ serviceCode <- function(item = ""){
     printLog("Loading failed")
     stop()
   }
+
+  # Now we need to calculate median cycle times for every shop_order and operation
+  df$cycle.time <- df$PASS1_ELAPSED_TIME / 1000
   
-  if( item != ""){
-    df <- df[grep(item, df$ITEM),]
+  df.mean <- aggregate(data = df, cycle.time ~ OPERATION  + SHOP_ORDER + ITEM + ITEM_REVISION, FUN = "mean", na.rm = TRUE)
+  names(df.mean)[names(df.mean) %in% "cycle.time"] <- "mean"
+
+  df.sd <- aggregate(data = df, cycle.time ~ OPERATION  + SHOP_ORDER + ITEM + ITEM_REVISION, FUN = "sd", na.rm = TRUE)
+  names(df.sd)[names(df.sd) %in% "cycle.time"] <- "sd"
+
+  # Merge the two descriptives
+  df <- merge(df.mean, df.sd, by = c("OPERATION", "SHOP_ORDER", "ITEM", "ITEM_REVISION"))
+
+  # # Order levels alphabetically
+  # df$OPERATION <- factor(df$OPERATION, levels = levels(df$OPERATION)[order(levels(df$OPERATION))])
+  df$SHOP_ORDER <- factor(df$SHOP_ORDER)
+  
+  # Now we need for these items historical cycle times.
+  
+  items <- paste(df$ITEM, collapse = "' OR ITEM='")
+  
+  printLog("Loading started, historic cycle times")
+  db <- odbcDriverConnect(s.odbc)
+  df.hist <- sqlQuery(db, paste("SELECT a.OPERATION, a.PASS1_ELAPSED_TIME,
+                                  a.ODS_DATE_TIME, a.ITEM
+                                  FROM dbo.ODS_PRODUCTION_LOG AS a
+                                  WHERE a.DATE_TIME >='2015-01-01' AND (ITEM='", items, "')", sep = "")) 
+  odbcClose(db)
+  if (nrow(df.hist) > 2)
+    printLog("Loading successful")
+  else{
+    printLog("Loading failed")
+    stop()
   }
-
-  # Summarise for plotting 
-  df <- aggregate(data = df, QTY ~ ITEM  + STATUS_DESCRIPTION, FUN = "sum", na.rm = TRUE)
-
-  # Order levels alphabetically
-  df$ITEM <- factor(df$ITEM, levels = levels(df$ITEM)[order(levels(df$ITEM))])
-  df$STATUS_DESCRIPTION <- factor(df$STATUS_DESCRIPTION, 
-                                  levels = levels(df$STATUS_DESCRIPTION)[order(levels(df$STATUS_DESCRIPTION))])
   
-  li <- levels(df$ITEM)
-  ls <- levels(df$STATUS_DESCRIPTION)
   
+  df.hist$cycle.time <- df.hist$PASS1_ELAPSED_TIME / 1000
+  df.hist.mean <- aggregate(data = df.hist, cycle.time ~ OPERATION  + ITEM, FUN = "mean", na.rm = TRUE)
+  names(df.hist.mean)[names(df.hist.mean) %in% "cycle.time"] <- "mean"
+  
+  df.hist.sd <- aggregate(data = df.hist, cycle.time ~ OPERATION  + ITEM, FUN = "sd", na.rm = TRUE)
+  names(df.hist.sd)[names(df.hist.sd) %in% "cycle.time"] <- "sd"
+  # Merge the two descriptives
+  df.hist <- merge(df.hist.mean, df.hist.sd, by = c("OPERATION", "ITEM"))
+  
+  #  
+  #li <- levels(df$OPERATION)
+  #ls <- levels(df$SHOP_ORDER)
+   
   ##### Creating a plot ######
   printLog("Creating the plot")
-  plotStr <- "var data = [";
-  
-  first.row <- TRUE  
-  for (i in li) {
-    y <- rep(0, length(li))
-    for (j in ls) {
-      # Y vector
-      y[which(ls == j)] <- ifelse(length(df$QTY[df$ITEM == i & df$STATUS_DESCRIPTION == j]) > 0, 
-                                  df$QTY[df$ITEM == i & df$STATUS_DESCRIPTION == j], 0)
-    }
-    
-    if (sum(y) > 0) {
-      ifelse(!first.row, plotStr <- paste(plotStr, ", ", sep = ""), first.row <- FALSE)
-      
-      #plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines+markers', line: {shape: 'spline'},", sep = "")
-      plotStr <- paste(plotStr, "{type: 'bar',", sep = "")
-      plotStr <- paste(plotStr, "name: '", i, "',", sep = "")
-      # Assemble x and y
-      plotStr <- paste(plotStr, "x: ['", paste(ls[y > 0], collapse = "','"),"'],", sep = "")
-      plotStr <- paste(plotStr, "y: [", paste(y[y > 0], collapse = ","),"]", sep = "")
-      
-      plotStr <- paste(plotStr, "}", sep = "")
-    }
-  }
-  
-  plotStr <- paste(plotStr, "];",
-                   #"var layout = {title: 'Item statuses over past 24hrs as of ", t2,"'};",
-                   "var layout = {title: 'Item statuses over past 24hrs as of  ", t2,"', barmode: 'stack'};",
-                   "myChart = document.getElementById('myChart');
-                              Plotly.newPlot(myChart, data, layout);", sep = "");   
-  
+  plotStr <- ""
+  # plotStr <- "var data = [";
+  # 
+  # first.row <- TRUE  
+  # for (i in li) {
+  #   y <- rep(0, length(li))
+  #   for (j in ls) {
+  #     # Y vector
+  #     y[which(ls == j)] <- ifelse(length(df$QTY[df$ITEM == i & df$STATUS_DESCRIPTION == j]) > 0, 
+  #                                 df$QTY[df$ITEM == i & df$STATUS_DESCRIPTION == j], 0)
+  #   }
+  #   
+  #   if (sum(y) > 0) {
+  #     ifelse(!first.row, plotStr <- paste(plotStr, ", ", sep = ""), first.row <- FALSE)
+  #     
+  #     #plotStr <- paste(plotStr, "{type: 'scatter', model: 'lines+markers', line: {shape: 'spline'},", sep = "")
+  #     plotStr <- paste(plotStr, "{type: 'bar',", sep = "")
+  #     plotStr <- paste(plotStr, "name: '", i, "',", sep = "")
+  #     # Assemble x and y
+  #     plotStr <- paste(plotStr, "x: ['", paste(ls[y > 0], collapse = "','"),"'],", sep = "")
+  #     plotStr <- paste(plotStr, "y: [", paste(y[y > 0], collapse = ","),"]", sep = "")
+  #     
+  #     plotStr <- paste(plotStr, "}", sep = "")
+  #   }
+  # }
+  # 
+  # plotStr <- paste(plotStr, "];",
+  #                  #"var layout = {title: 'Item statuses over past 24hrs as of ", t2,"'};",
+  #                  "var layout = {title: 'Item statuses over past 24hrs as of  ", t2,"', barmode: 'stack'};",
+  #                  "myChart = document.getElementById('myChart');
+  #                             Plotly.newPlot(myChart, data, layout);", sep = "");   
+  # 
   ##### Returning dataset ##### 
-  df <- dcast(data = df, ITEM~STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
+  # df <- dcast(data = df, ITEM~STATUS_DESCRIPTION, fun.aggregate = sum, value.var = "QTY")
+  
   printLog("Returning dataset")
-  s <- toJSON(list(result = df, plot = plotStr), na = "string", null = "list")
-  return(s)
+  s <- toJSON(list(result = df, historics = df.hist, plot = plotStr), na = "string", null = "list")
+  #return(s)
   }
 
 
